@@ -30,7 +30,7 @@ Config.DayNight = {
 -- Upgrade cost = base * growth ^ level  (level starts at 0, no cap)
 Config.Upgrades = {
 	Rod = { base = 25, growth = 1.35, name = "Fishing Rod", desc = "Rarer fish, faster bites" },
-	Aquarium = { base = 100, growth = 1.45, name = "Aquarium", desc = "+5 tank slots, +10% income" },
+	Aquarium = { base = 60, growth = 1.30, name = "Aquarium", desc = "+25 tank slots, +10% income" },
 	Castle = { base = 150, growth = 1.50, name = "Castle Walls", desc = "+HP, more cannons, taller walls" },
 	Ship = { base = 200, growth = 1.60, name = "Ship", desc = "Faster, tougher, more cannons" },
 	Musket = { base = 120, growth = 1.40, name = "Musket", desc = "More damage, faster reload, longer range" },
@@ -83,7 +83,7 @@ function Config.Stats.BiteTime(level: number): (number, number)
 	return minT, maxT
 end
 function Config.Stats.AquariumCapacity(level: number): number
-	return 10 + level * 5
+	return 50 + level * 25
 end
 function Config.Stats.IncomeMultiplier(level: number): number
 	return 1 + level * 0.10
