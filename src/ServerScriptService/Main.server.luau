@@ -5,6 +5,20 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+-- Guard against a second copy of this script (e.g. a leftover manual paste next to the Rojo copy)
+if _G.FishingTycoonBooted then
+	warn("[FishingTycoon] A second Main script tried to start. Delete the duplicate in ServerScriptService (keep the Rojo one). Skipping.")
+	return
+end
+_G.FishingTycoonBooted = true
+for _, svc in ipairs({ game:GetService("ServerScriptService"), game:GetService("StarterPlayer").StarterPlayerScripts }) do
+	local seen = {}
+	for _, child in ipairs(svc:GetChildren()) do
+		if seen[child.Name] then warn("[FishingTycoon] Duplicate '" .. child.Name .. "' in " .. svc:GetFullName() .. " — delete one.") end
+		seen[child.Name] = true
+	end
+end
+
 require(ReplicatedStorage.Shared.Remotes) -- creates RemoteEvents
 
 local Services = script.Parent.Services

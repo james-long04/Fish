@@ -117,7 +117,7 @@ local function spawnWave(island: Model)
 			pirate:SetAttribute("TargetIsland", island.Name)
 			-- spawn on the beach at a random angle, just inside the sand edge
 			local ang = math.random() * math.pi * 2
-			local R = Config.World.IslandRadius * 1.05
+			local R = Config.World.IslandRadius * 1.22
 			local pos = root.Position + Vector3.new(math.cos(ang) * R, 5, math.sin(ang) * R)
 			pirate:PivotTo(CFrame.new(pos))
 			pirate.Parent = CombatService.PiratesFolder()

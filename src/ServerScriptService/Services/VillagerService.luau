@@ -250,7 +250,7 @@ function VillagerService.Rebuild(player: Player)
 		table.insert(waypoints, castleCentre + Vector3.new(math.cos(ang) * 36, 1, math.sin(ang) * 36))
 	end
 	table.insert(waypoints, (facing * CFrame.new(0, y + 4, -20)).Position)
-	table.insert(waypoints, (facing * CFrame.new(0, y + 4, -(R - 14))).Position)
+	table.insert(waypoints, (facing * CFrame.new(0, y + 4, -(R - 4))).Position)
 	for i = 1, profile.Villagers.Guards do
 		local hp = Config.Villagers.GuardHP(profile.Villagers.GuardWeapon)
 		local rig = Builders.BuildVillager("Guard", hp, profile.Villagers.GuardWeapon)
