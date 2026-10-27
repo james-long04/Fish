@@ -260,6 +260,21 @@ end
 local aqHeader = label(aqBody, "0 / 10 fish", UDim2.new(1, -8, 0, 30), UDim2.new(), 20)
 local aqSub = label(aqBody, "Discovered 0 / 300 species", UDim2.new(1, -8, 0, 22), UDim2.new(), 14)
 aqSub.TextColor3 = Color3.fromRGB(200, 215, 235)
+local sellAllBtn = button(aqBody, "💰 Sell ALL fish", UDim2.new(1, -8, 0, 34), UDim2.new(), Color3.fromRGB(255, 150, 60))
+local sellConfirm = false
+sellAllBtn.MouseButton1Click:Connect(function()
+	if sellConfirm then
+		sellConfirm = false
+		sellAllBtn.Text = "💰 Sell ALL fish"
+		Remotes.SellFish:FireServer("ALL")
+	else
+		sellConfirm = true
+		sellAllBtn.Text = "⚠️ Tap again to confirm (loses income!)"
+		task.delay(3, function() sellConfirm = false; sellAllBtn.Text = "💰 Sell ALL fish" end)
+	end
+end)
+local sellHint = label(aqBody, "Tap a fish to sell one. Each sells for 90s of its income.", UDim2.new(1, -8, 0, 18), UDim2.new(), 12)
+sellHint.TextColor3 = Color3.fromRGB(200, 215, 235)
 local aqRows: { [string]: Frame } = {}
 local function fishRow(parent: Instance, name: string, rarity: string, color: Color3, onTap: ((string) -> ())?): Frame
 	local row = Instance.new("Frame")
@@ -280,11 +295,11 @@ local function fishRow(parent: Instance, name: string, rarity: string, color: Co
 	local r = label(row, rarity, UDim2.new(0.5, 0, 0, 18), UDim2.fromOffset(44, 24), 12)
 	r.TextXAlignment = Enum.TextXAlignment.Left
 	r.TextColor3 = Config.RarityColors[rarity] or COL.Text
-	local inc = label(row, "", UDim2.new(0.3, 0, 0, 18), UDim2.new(0.56, 0, 0, 24), 12)
+	local inc = label(row, "", UDim2.new(0.3, 0, 0, 18), UDim2.new(0.42, 0, 0, 24), 12)
 	inc.Name = "Income"
 	inc.TextXAlignment = Enum.TextXAlignment.Right
 	inc.TextColor3 = COL.Green
-	local c = label(row, "x0", UDim2.new(0.3, 0, 0, 24), UDim2.new(0.56, 0, 0, 2), 18)
+	local c = label(row, "x0", UDim2.new(0.3, 0, 0, 24), UDim2.new(0.42, 0, 0, 2), 18)
 	c.Name = "Count"
 	c.TextXAlignment = Enum.TextXAlignment.Right
 	if onTap then
@@ -309,7 +324,13 @@ refreshAquarium = function(fish: { [string]: number })
 				table.insert(order, f)
 				local row = aqRows[name]
 				if not row then
-					row = fishRow(aqBody, name, f.rarity, f.color)
+					row = fishRow(aqBody, name, f.rarity, f.color, function(nm) Remotes.SellFish:FireServer(nm, 1) end)
+					local sell = button(row, "Sell", UDim2.fromOffset(44, 24), UDim2.new(1, -50, 0, 11), Color3.fromRGB(255, 150, 60))
+					sell.ZIndex = 3
+					sell.MouseButton1Click:Connect(function() Remotes.SellFish:FireServer(name, 1) end)
+					local sellAllOf = button(row, "All", UDim2.fromOffset(36, 24), UDim2.new(1, -92, 0, 11), Color3.fromRGB(200, 110, 50))
+					sellAllOf.ZIndex = 3
+					sellAllOf.MouseButton1Click:Connect(function() Remotes.SellFish:FireServer(name, 999) end)
 					aqRows[name] = row
 				end
 				(row:FindFirstChild("Count") :: TextLabel).Text = "x" .. tostring(count);
@@ -741,8 +762,8 @@ Remotes.Stats.OnClientEvent:Connect(function(s)
 	latestFish = s.Fish
 	refreshCrew(s.Crew, s.Coins)
 	statsText.Text = string.format(
-		"Total caught: %d\nPirates slain: %d\nRaids won: %d\nShip: %s (Lv %d)\nCastle HP: %s / %s",
-		s.TotalCaught, s.PiratesSlain, s.RaidsWon, s.ShipTier, s.Upgrades.Ship, fmt(s.CastleHP), fmt(s.CastleMaxHP)
+		"Total caught: %d\nPirates slain: %d\nRaids won: %d\nShip: %s (Lv %d)\nMusket: Lv %d (%d dmg)\nCastle HP: %s / %s",
+		s.TotalCaught, s.PiratesSlain, s.RaidsWon, s.ShipTier, s.Upgrades.Ship, s.Upgrades.Musket or 0, Config.Musket.Damage(s.Upgrades.Musket or 0), fmt(s.CastleHP), fmt(s.CastleMaxHP)
 	)
 end)
 

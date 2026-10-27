@@ -14,7 +14,7 @@ local store = DataStoreService:GetDataStore(STORE_NAME)
 
 export type Profile = {
 	Coins: number,
-	Upgrades: { Rod: number, Aquarium: number, Castle: number, Ship: number },
+	Upgrades: { Rod: number, Aquarium: number, Castle: number, Ship: number, Musket: number },
 	Fish: { [string]: number }, -- fish name -> count in aquarium
 	Discovered: { [string]: boolean }, -- species ever caught
 	TotalCaught: number,
@@ -40,7 +40,7 @@ local loaded: { [Player]: boolean } = {}
 local function defaultProfile(): Profile
 	return {
 		Coins = Config.Economy.StartingCoins,
-		Upgrades = { Rod = 0, Aquarium = 0, Castle = 0, Ship = 0 },
+		Upgrades = { Rod = 0, Aquarium = 0, Castle = 0, Ship = 0, Musket = 0 },
 		Fish = {},
 		Discovered = {},
 		TotalCaught = 0,

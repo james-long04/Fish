@@ -33,8 +33,19 @@ Config.Upgrades = {
 	Aquarium = { base = 100, growth = 1.45, name = "Aquarium", desc = "+5 tank slots, +10% income" },
 	Castle = { base = 150, growth = 1.50, name = "Castle Walls", desc = "+HP, more cannons, taller walls" },
 	Ship = { base = 200, growth = 1.60, name = "Ship", desc = "Faster, tougher, more cannons" },
+	Musket = { base = 120, growth = 1.40, name = "Musket", desc = "More damage, faster reload, longer range" },
 }
-Config.UpgradeOrder = { "Rod", "Aquarium", "Castle", "Ship" }
+Config.UpgradeOrder = { "Rod", "Aquarium", "Castle", "Ship", "Musket" }
+
+-- Selling: a fish is worth this many seconds of its own income (so rare fish sell for a lot)
+Config.SellSecondsOfIncome = 90
+
+Config.Musket = {
+	Damage = function(level: number): number return math.floor(30 * (1.22 ^ level)) end,
+	Reload = function(level: number): number return math.max(0.35, 1.6 * (0.93 ^ level)) end,
+	Range = function(level: number): number return 120 + level * 8 end,
+	Speed = 320,
+}
 
 function Config.UpgradeCost(kind: string, level: number): number
 	local u = Config.Upgrades[kind]

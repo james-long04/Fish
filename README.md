@@ -19,6 +19,8 @@ ships, pirates) is generated from Parts when the server starts. Replace them wit
 - **Real creature models**: every species gets a body plan (shark, ray, eel, octopus, turtle, crab, jellyfish, whale, seahorse, puffer, billfish, anglerfish, shellfish or generic fish) built from parts and animated swimming in the tank, with a name/income label when you walk up
 - **Villagers are real avatars** (R15, Roblox's default walk/idle animations). Fishers roam between ten shoreline spots, cast with a splash, and carry catches to your tank; guards patrol a loop around the castle and charge raiders
 - **Enterable castle**: open gate, courtyard, ramps up to the wall walk, cannons you fire yourself with E, a keep with a treasure chest inside; pirates path through the gate
+- **Sell fish** from the Tank panel (one, all of a species, or everything) for 90 seconds of that fish's income each
+- **Musket**: a 5th upgrade. Equip it from the hotbar and click to shoot — hitscan, tracer, headshots do 1.5×; damage, reload and range scale with level
 - **Island crew**: hire Fishers (auto-catch on a timer, into your tank) and Guards (patrol the castle, fight pirates and raiders) with coins; upgrade their rods and weapons without limit
 - Saving (DataStore), offline earnings, mobile-friendly HUD built in code
 

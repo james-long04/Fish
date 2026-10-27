@@ -114,7 +114,43 @@ function EconomyService.ApplyOfflineEarnings(player: Player)
 	end
 end
 
+function EconomyService.SellValue(player: Player, name: string): number
+	local f = Config.FishByName(name)
+	if not f then return 0 end
+	local profile = DataService.Get(player)
+	local mult = profile and Config.Stats.IncomeMultiplier(profile.Upgrades.Aquarium) or 1
+	return math.floor(f.income * Config.SellSecondsOfIncome * mult * Monetization.IncomeMult(player))
+end
+
+local function onSell(player: Player, name: any, count: any)
+	local profile = DataService.Get(player)
+	if not profile then return end
+	local total, sold = 0, 0
+	if name == "ALL" then
+		for fishName, n in pairs(profile.Fish) do
+			total += EconomyService.SellValue(player, fishName) * n
+			sold += n
+		end
+		profile.Fish = {}
+	else
+		if type(name) ~= "string" or not Config.FishByName(name) then return end
+		local have = profile.Fish[name] or 0
+		local n = math.clamp(math.floor(tonumber(count) or 1), 1, have)
+		if n <= 0 then return end
+		total = EconomyService.SellValue(player, name) * n
+		sold = n
+		profile.Fish[name] = have - n
+		if profile.Fish[name] <= 0 then profile.Fish[name] = nil end
+	end
+	if sold == 0 then return end
+	profile.Coins += total
+	IslandService.UpdateAquariumDisplay(player)
+	EconomyService.Notify(player, string.format("Sold %d fish for %d coins", sold, total), Color3.fromRGB(255, 220, 90))
+	EconomyService.PushStats(player)
+end
+
 function EconomyService.Start()
+	Remotes.SellFish.OnServerEvent:Connect(onSell)
 	Remotes.BuyUpgrade.OnServerEvent:Connect(onBuy)
 	task.spawn(function()
 		while true do

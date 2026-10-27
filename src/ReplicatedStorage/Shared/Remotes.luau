@@ -29,6 +29,8 @@ local EVENTS = {
 	"Crew",           -- client -> server: ("HireFisher" | "HireGuard" | "UpgradeRods" | "UpgradeWeapons")
 	"ManCannon",      -- server -> client: (barrel or nil) you are now manning / left a castle cannon
 	"AimCannon",      -- client -> server: (yaw, pitch) in radians while manning
+	"SellFish",       -- client -> server: (fishName, count) or ("ALL")
+	"ShootMusket",    -- client -> server: (origin: Vector3, direction: Vector3)
 }
 
 local folder = ReplicatedStorage:FindFirstChild("Remotes")

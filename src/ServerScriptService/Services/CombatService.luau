@@ -218,6 +218,107 @@ local function runCastleCannons()
 	end
 end
 
+-- Musket tool: aim with the mouse, click to fire. Hitscan with a tracer; damage/reload/range from the Musket upgrade.
+local lastShot: { [Player]: number } = {}
+local function giveMusket(player: Player, char: Model)
+	for _, container in ipairs({ player.Backpack, char }) do
+		if container:FindFirstChild("Musket") then return end
+	end
+	local tool = Instance.new("Tool")
+	tool.Name = "Musket"
+	tool.RequiresHandle = true
+	tool.CanBeDropped = false
+	tool.ToolTip = "Click to shoot. Upgrade in the Shop."
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Size = Vector3.new(0.4, 0.5, 4.2)
+	handle.Color = Color3.fromRGB(110, 70, 40)
+	handle.Material = Enum.Material.Wood
+	handle.CanCollide = false
+	handle.Parent = tool
+	local barrel = Instance.new("Part")
+	barrel.Name = "Barrel"
+	barrel.Shape = Enum.PartType.Cylinder
+	barrel.Size = Vector3.new(3.2, 0.3, 0.3)
+	barrel.Color = Color3.fromRGB(60, 62, 70)
+	barrel.Material = Enum.Material.Metal
+	barrel.CanCollide = false
+	barrel.CFrame = handle.CFrame * CFrame.new(0, 0.3, -1) * CFrame.Angles(0, math.rad(90), 0)
+	barrel.Parent = tool
+	local w = Instance.new("WeldConstraint"); w.Part0 = handle; w.Part1 = barrel; w.Parent = barrel
+	local muzzle = Instance.new("Attachment")
+	muzzle.Name = "Muzzle"
+	muzzle.Position = Vector3.new(0, 0.3, -2.6)
+	muzzle.Parent = handle
+	tool.Grip = CFrame.new(0, -0.1, 0.8) * CFrame.Angles(0, 0, 0)
+	tool.Parent = player.Backpack
+end
+
+local function musketShot(player: Player, origin: any, direction: any)
+	local profile = DataService.Get(player)
+	local char = player.Character
+	if not profile or not char or typeof(origin) ~= "Vector3" or typeof(direction) ~= "Vector3" then return end
+	local tool = char:FindFirstChild("Musket")
+	if not tool then return end
+	local level = profile.Upgrades.Musket
+	if os.clock() - (lastShot[player] or 0) < Config.Musket.Reload(level) * 0.9 then return end
+	lastShot[player] = os.clock()
+	local hrp = char:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not hrp or (origin - hrp.Position).Magnitude > 12 then return end
+	local range = Config.Musket.Range(level)
+	local dmg = Config.Musket.Damage(level)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { char, projectilesFolder }
+	local result = Workspace:Raycast(origin, direction.Unit * range, params)
+	local hitPos = result and result.Position or (origin + direction.Unit * range)
+	-- tracer
+	local tracer = Instance.new("Part")
+	tracer.Anchored = true
+	tracer.CanCollide = false
+	tracer.CanQuery = false
+	tracer.Material = Enum.Material.Neon
+	tracer.Color = Color3.fromRGB(255, 230, 150)
+	local len = (hitPos - origin).Magnitude
+	tracer.Size = Vector3.new(0.08, 0.08, len)
+	tracer.CFrame = CFrame.lookAt(origin, hitPos) * CFrame.new(0, 0, -len / 2)
+	tracer.Parent = projectilesFolder
+	Debris:AddItem(tracer, 0.08)
+	local flash = Instance.new("PointLight")
+	flash.Brightness = 4
+	flash.Range = 10
+	flash.Color = Color3.fromRGB(255, 200, 100)
+	flash.Parent = tool:FindFirstChild("Handle")
+	Debris:AddItem(flash, 0.08)
+	if result then
+		local hit = result.Instance
+		local model = hit:FindFirstAncestorOfClass("Model")
+		local hum = model and model:FindFirstChildOfClass("Humanoid")
+		if hum and model then
+			-- no friendly fire on your own villagers
+			local isMine = model:GetAttribute("IsVillager") and IslandService.GetIsland(player) and model:GetAttribute("Island") == (IslandService.GetIsland(player) :: Model).Name
+			if not isMine then
+				local headshot = hit.Name == "Head"
+				hum:TakeDamage(headshot and dmg * 1.5 or dmg)
+				if model:GetAttribute("IsPirate") then model:SetAttribute("LastHitBy", player.UserId) end
+			end
+		else
+			local castle = hit:FindFirstAncestor("Castle")
+			if castle then
+				local island = castle.Parent :: Model
+				if IslandService.GetOwner(island) ~= player and player.Character and player.Character:GetAttribute("Raiding") == island.Name then
+					CombatService.DamageCastle(island, math.floor(dmg * 0.4), player)
+				end
+			end
+		end
+		local e = Instance.new("Explosion")
+		e.BlastPressure = 0
+		e.BlastRadius = 0
+		e.Position = hitPos
+		e.Parent = Workspace
+	end
+end
+
 -- Cutlass tool: swing to hit pirates / enemy castles in front of you
 local function giveCutlass(player: Player, char: Model)
 	-- never stack duplicates
@@ -399,12 +500,14 @@ function CombatService.Start()
 
 	Players.PlayerRemoving:Connect(function(p) manning[p] = nil; lastManual[p] = nil end)
 	Remotes.AimCannon.OnServerEvent:Connect(onAim)
+	Remotes.ShootMusket.OnServerEvent:Connect(musketShot)
 	Players.PlayerAdded:Connect(function(player)
 		player.CharacterAdded:Connect(function(char)
 			leaveCannon(player)
 			giveCutlass(player, char)
+			giveMusket(player, char)
 		end)
-		if player.Character then giveCutlass(player, player.Character) end
+		if player.Character then giveCutlass(player, player.Character); giveMusket(player, player.Character) end
 	end)
 	task.spawn(runCastleCannons)
 end
