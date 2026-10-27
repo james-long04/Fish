@@ -28,6 +28,7 @@ local EVENTS = {
 	"TradeState",     -- server -> client: (state table or nil)
 	"Crew",           -- client -> server: ("HireFisher" | "HireGuard" | "UpgradeRods" | "UpgradeWeapons")
 	"ManCannon",      -- server -> client: (barrel or nil) you are now manning / left a castle cannon
+	"AimCannon",      -- client -> server: (yaw, pitch) in radians while manning
 }
 
 local folder = ReplicatedStorage:FindFirstChild("Remotes")

@@ -1,8 +1,8 @@
 --!strict
 -- ShipController (ModuleScript) — StarterPlayer/StarterPlayerScripts/ShipController
--- Drives your ship while you're in its DriverSeat (W/S or ↑/↓ = sail, A/D or ←/→ = turn, Space = leave),
--- fires ship broadsides and manned castle cannons toward where the camera is looking
--- (left click, F, or the FIRE button). Shows a small controls hint while driving / manning.
+-- SHIP: sit at the helm. W/↑ forward, S/↓ reverse, A/D or ←/→ turn, click / F / FIRE = broadside toward camera.
+-- CASTLE CANNON: press E at a cannon. A/D or ←/→ swing left/right, W/S or ↑/↓ raise/lower,
+--   left click / F / FIRE to shoot, E to step away. Camera locks behind the barrel while you aim.
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -14,17 +14,24 @@ local UI = require(script.Parent.UIController)
 
 local ShipController = {}
 local player = Players.LocalPlayer
-local manningBarrel: BasePart? = nil
 
--- keyboard state so arrows & WASD both work even if the seat doesn't report them
-local keys = { fwd = 0, turn = 0 }
-local function keyDelta(input: InputObject, down: boolean)
-	local k = input.KeyCode
-	if k == Enum.KeyCode.W or k == Enum.KeyCode.Up then keys.fwd = down and 1 or (keys.fwd == 1 and 0 or keys.fwd) end
-	if k == Enum.KeyCode.S or k == Enum.KeyCode.Down then keys.fwd = down and -1 or (keys.fwd == -1 and 0 or keys.fwd) end
-	if k == Enum.KeyCode.D or k == Enum.KeyCode.Right then keys.turn = down and 1 or (keys.turn == 1 and 0 or keys.turn) end
-	if k == Enum.KeyCode.A or k == Enum.KeyCode.Left then keys.turn = down and -1 or (keys.turn == -1 and 0 or keys.turn) end
+-- key state (WASD + arrows)
+local held: { [Enum.KeyCode]: boolean } = {}
+local function axis(neg: { Enum.KeyCode }, pos: { Enum.KeyCode }): number
+	local v = 0
+	for _, k in ipairs(pos) do if held[k] then v += 1 break end end
+	for _, k in ipairs(neg) do if held[k] then v -= 1 break end end
+	return v
 end
+local FWD = { Enum.KeyCode.W, Enum.KeyCode.Up }
+local BACK = { Enum.KeyCode.S, Enum.KeyCode.Down }
+local LEFT = { Enum.KeyCode.A, Enum.KeyCode.Left }
+local RIGHT = { Enum.KeyCode.D, Enum.KeyCode.Right }
+
+-- cannon state
+local manningBarrel: BasePart? = nil
+local yaw, pitch = 0, 0.08
+local lastAimSend = 0
 
 local function currentSeat(): VehicleSeat?
 	local char = player.Character
@@ -34,53 +41,66 @@ local function currentSeat(): VehicleSeat?
 	return nil
 end
 
-local function aimDirection(): Vector3
+local function cameraLook(): Vector3
 	local cam = Workspace.CurrentCamera
-	if not cam then return Vector3.new(0, 0, -1) end
-	return cam.CFrame.LookVector
+	return cam and cam.CFrame.LookVector or Vector3.new(0, 0, -1)
 end
 
 local function fire()
-	Remotes.FireCannons:FireServer(aimDirection())
+	Remotes.FireCannons:FireServer(cameraLook())
 end
 
--- Controls hint + crosshair
+-- HUD bits
 local gui = player:WaitForChild("PlayerGui"):WaitForChild("TycoonHUD") :: ScreenGui
 local hint = Instance.new("TextLabel")
-hint.Size = UDim2.fromOffset(360, 22)
-hint.Position = UDim2.new(0.5, -180, 1, -34)
+hint.Size = UDim2.fromOffset(420, 22)
+hint.Position = UDim2.new(0.5, -210, 1, -34)
 hint.BackgroundColor3 = Color3.fromRGB(30, 50, 80)
 hint.BackgroundTransparency = 0.3
 hint.Font = Enum.Font.FredokaOne
 hint.TextSize = 13
 hint.TextColor3 = Color3.fromRGB(200, 235, 255)
-hint.Text = ""
 hint.Visible = false
 hint.Parent = gui
 local hc = Instance.new("UICorner"); hc.CornerRadius = UDim.new(0, 8); hc.Parent = hint
 local cross = Instance.new("TextLabel")
-cross.Size = UDim2.fromOffset(30, 30)
-cross.Position = UDim2.new(0.5, -15, 0.5, -15)
+cross.Size = UDim2.fromOffset(40, 40)
+cross.Position = UDim2.new(0.5, -20, 0.5, -20)
 cross.BackgroundTransparency = 1
 cross.Font = Enum.Font.FredokaOne
-cross.TextSize = 26
+cross.TextSize = 32
 cross.TextColor3 = Color3.fromRGB(255, 230, 120)
 cross.TextStrokeTransparency = 0.3
-cross.Text = "+"
+cross.Text = "◎"
 cross.Visible = false
 cross.Parent = gui
 
+local function setCannonCamera(on: boolean)
+	local cam = Workspace.CurrentCamera
+	if not cam then return end
+	if on then
+		cam.CameraType = Enum.CameraType.Scriptable
+	else
+		cam.CameraType = Enum.CameraType.Custom
+		local char = player.Character
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		if hum then cam.CameraSubject = hum end
+	end
+end
+
 function ShipController.Start()
 	UI.FireButton.MouseButton1Click:Connect(fire)
+
 	UserInputService.InputBegan:Connect(function(input, gp)
-		if input.UserInputType == Enum.UserInputType.Keyboard then keyDelta(input, true) end
+		if input.UserInputType == Enum.UserInputType.Keyboard then held[input.KeyCode] = true end
 		if gp then return end
 		local sailing = currentSeat() ~= nil
 		if input.KeyCode == Enum.KeyCode.F and (sailing or manningBarrel) then fire() end
-		if input.UserInputType == Enum.UserInputType.MouseButton1 and manningBarrel then fire() end
+		if input.UserInputType == Enum.UserInputType.MouseButton1 and (manningBarrel or sailing) then fire() end
+		if input.UserInputType == Enum.UserInputType.Touch and manningBarrel then fire() end
 	end)
 	UserInputService.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.Keyboard then keyDelta(input, false) end
+		if input.UserInputType == Enum.UserInputType.Keyboard then held[input.KeyCode] = nil end
 	end)
 
 	Remotes.ManCannon.OnClientEvent:Connect(function(barrel: BasePart?)
@@ -88,13 +108,43 @@ function ShipController.Start()
 		cross.Visible = barrel ~= nil
 		UI.FireButton.Visible = barrel ~= nil or currentSeat() ~= nil
 		if barrel then
-			hint.Text = "🎯 Aim with camera • Click / F / FIRE to shoot • E to step away"
+			yaw, pitch = 0, 0.08
+			hint.Text = "🎯 A/D ←/→ turn • W/S ↑/↓ raise/lower • Click / F / FIRE shoot • E leave"
 			hint.Visible = true
-		elseif not currentSeat() then
-			hint.Visible = false
+			setCannonCamera(true)
+		else
+			setCannonCamera(false)
+			if not currentSeat() then hint.Visible = false end
 		end
 	end)
 
+	-- Cannon aiming + camera, every frame
+	RunService.RenderStepped:Connect(function(dt)
+		local barrel = manningBarrel
+		if not barrel or not barrel.Parent then
+			if barrel then manningBarrel = nil; cross.Visible = false; setCannonCamera(false) end
+			return
+		end
+		yaw = math.clamp(yaw + axis(LEFT, RIGHT) * -1.4 * dt, -math.rad(80), math.rad(80))
+		pitch = math.clamp(pitch + axis(BACK, FWD) * 0.8 * dt, -0.2, 0.75)
+		if os.clock() - lastAimSend > 0.05 then
+			lastAimSend = os.clock()
+			Remotes.AimCannon:FireServer(yaw, pitch)
+		end
+		-- camera: behind & above the barrel, looking down its length
+		local cam = Workspace.CurrentCamera
+		if cam then
+			local pivot = barrel:GetAttribute("Pivot") :: Vector3
+			local dir = barrel.CFrame.RightVector
+			local flat = Vector3.new(dir.X, 0, dir.Z)
+			if flat.Magnitude < 0.01 then flat = Vector3.new(0, 0, -1) end
+			flat = flat.Unit
+			local eye = pivot - flat * 9 + Vector3.new(0, 5.5, 0)
+			cam.CFrame = CFrame.lookAt(eye, pivot + dir * 40)
+		end
+	end)
+
+	-- Ship driving
 	local lastHull: BasePart? = nil
 	RunService.Heartbeat:Connect(function()
 		local seat = currentSeat()
@@ -113,25 +163,22 @@ function ShipController.Start()
 		if lastHull ~= hull then
 			lastHull = hull
 			UI.FireButton.Visible = true
-			hint.Text = "⛵ W/S or ↑/↓ sail • A/D or ←/→ turn • F / click FIRE • Space to leave"
+			hint.Text = "⛵ W/↑ forward • S/↓ back • A/D ←/→ turn • Click / F / FIRE broadside • Space leave"
 			hint.Visible = true
 		end
-		-- inputs: seat (works on mobile thumbstick) OR keyboard
-		local throttle = seat.Throttle ~= 0 and seat.Throttle or keys.fwd
-		local steer = seat.Steer ~= 0 and seat.Steer or keys.turn
+		local throttle = (seat.Throttle ~= 0) and seat.Throttle or axis(BACK, FWD)
+		local steer = (seat.Steer ~= 0) and seat.Steer or axis(LEFT, RIGHT)
 		local speed = (ship:GetAttribute("Speed") :: number) or 24
-		local forward = hull.CFrame.LookVector * -1 -- ship nose faces local -Z
+		local forward = hull.CFrame.LookVector -- bow is at the hull's -Z, which is LookVector
 		forward = Vector3.new(forward.X, 0, forward.Z).Unit
 		local current = hull.AssemblyLinearVelocity
 		local target = forward * (throttle * speed)
-		-- smooth accelerate/decelerate, keep vertical (buoyancy) as-is
-		local blended = Vector3.new(
+		hull.AssemblyLinearVelocity = Vector3.new(
 			current.X + (target.X - current.X) * 0.08,
 			current.Y,
 			current.Z + (target.Z - current.Z) * 0.08
 		)
-		hull.AssemblyLinearVelocity = blended
-		local turnRate = 0.9 * (throttle ~= 0 and 1 or 0.6)
+		local turnRate = 0.9 * ((throttle ~= 0) and 1 or 0.6)
 		hull.AssemblyAngularVelocity = Vector3.new(0, -steer * turnRate, 0)
 	end)
 end

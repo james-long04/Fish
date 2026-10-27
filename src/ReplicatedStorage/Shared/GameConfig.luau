@@ -15,10 +15,11 @@ Config.Economy = {
 
 Config.World = {
 	IslandCount = 8,
-	IslandRingRadius = 360,
-	IslandRadius = 36,
+	IslandRingRadius = 560,
+	IslandRadius = 60,
+	BorderRadius = 1150,
 	SeaLevelY = 0,
-	WaterSize = 2400,
+	WaterSize = 3200,
 }
 
 Config.DayNight = {
@@ -135,7 +136,7 @@ Config.Villagers = {
 	-- Guards
 	GuardHP = function(weaponLevel: number): number return math.floor(120 * (1.3 ^ weaponLevel)) end,
 	GuardDamage = function(weaponLevel: number): number return math.floor(14 * (1.3 ^ weaponLevel)) end,
-	GuardRange = 40,
+	GuardRange = 60,
 	GuardAttackInterval = 1.2,
 	GuardWalkSpeed = 15,
 }
@@ -147,7 +148,7 @@ Config.Pirates = {
 	Bounty = function(castleLevel: number): number return math.floor(15 * (1.4 ^ castleLevel)) end,
 	AttackInterval = 1.5,
 	WalkSpeed = 12,
-	CannonRange = 70,
+	CannonRange = 110,
 	CannonInterval = 2,
 	SwordDamage = function(rodLevel: number): number return 25 + rodLevel * 2 end,
 	SwordRange = 9,
@@ -155,7 +156,7 @@ Config.Pirates = {
 
 Config.Raid = {
 	ShieldSecondsAfterRaid = 300,
-	RangeFromCastle = 90,
+	RangeFromCastle = 130,
 }
 
 -- Rarity roll: weight * (1 + 0.035 * luck) ^ (tier - 1)

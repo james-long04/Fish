@@ -124,10 +124,21 @@ function Builders.BuildWorld()
 	pcall(function() (terrain :: any).Decoration = true end) -- animated grass; not scriptable on every Studio build
 	local size = Config.World.WaterSize
 	local y = Config.World.SeaLevelY
-	terrain:FillBlock(CFrame.new(0, y - 60, 0), Vector3.new(size, 8, size), Enum.Material.Sand) -- seabed
-	terrain:FillBlock(CFrame.new(0, y - 28, 0), Vector3.new(size, 56, size), Enum.Material.Water)
-	-- invisible floor so nothing is lost forever
-	part({ Name = "SeaFloor", Size = Vector3.new(size, 4, size), CFrame = CFrame.new(0, y - 66, 0), Transparency = 1, Parent = Workspace })
+	terrain:FillBlock(CFrame.new(0, y - 30, 0), Vector3.new(size, 8, size), Enum.Material.Sand) -- seabed
+	terrain:FillBlock(CFrame.new(0, y - 13, 0), Vector3.new(size, 26, size), Enum.Material.Water)
+	-- invisible floor + a ring wall so ships can't reach the edge of the water
+	part({ Name = "SeaFloor", Size = Vector3.new(size, 4, size), CFrame = CFrame.new(0, y - 36, 0), Transparency = 1, Parent = Workspace })
+	local border = Instance.new("Model")
+	border.Name = "Border"
+	border.Parent = Workspace
+	local segs = 48
+	local br = Config.World.BorderRadius
+	for i = 1, segs do
+		local a = (i / segs) * math.pi * 2
+		local len = 2 * math.pi * br / segs + 4
+		local p = part({ Name = "BorderWall", Size = Vector3.new(len, 80, 4), Transparency = 1, Parent = border, CFrame = CFrame.new(math.cos(a) * br, y + 20, math.sin(a) * br) * CFrame.Angles(0, -a + math.rad(90), 0) })
+		p.CanCollide = true
+	end
 
 	-- Lighting
 	Lighting.Brightness = 2.6
@@ -144,12 +155,12 @@ function Builders.BuildWorld()
 		if e then e:Destroy() end
 	end
 	local atm = Instance.new("Atmosphere")
-	atm.Density = 0.32
-	atm.Offset = 0.25
+	atm.Density = 0.42       -- thick enough to melt the far edge of the sea into the sky
+	atm.Offset = 0.35
 	atm.Color = Color3.fromRGB(205, 232, 255)
-	atm.Decay = Color3.fromRGB(110, 190, 255)
-	atm.Glare = 0.4
-	atm.Haze = 1.8
+	atm.Decay = Color3.fromRGB(120, 195, 255)
+	atm.Glare = 0.35
+	atm.Haze = 2.6
 	atm.Parent = Lighting
 	local bloom = Instance.new("BloomEffect")
 	bloom.Intensity = 0.4
@@ -199,7 +210,7 @@ function Builders.BuildTerrainIsland(center: Vector3, R: number)
 	}
 	for _, L in ipairs(layers) do
 		local r, top = R * L[1], y + L[2]
-		local h = top + 14
+		local h = top + 24
 		terrain:FillCylinder(CFrame.new(center.X, top - h / 2, center.Z), h, r, Enum.Material.Sand)
 	end
 	-- grassy centre
@@ -250,23 +261,23 @@ end
 function Builders.BuildProps(center: CFrame, R: number, parent: Instance)
 	local y = Config.World.SeaLevelY
 	-- rocks
-	for _ = 1, 5 do
+	for _ = 1, 9 do
 		local ang = math.random() * math.pi * 2
-		local r = R * (0.75 + math.random() * 0.35)
+		local r = R * (0.8 + math.random() * 0.3)
 		local s = 1.5 + math.random() * 2.5
 		ellipsoid(Vector3.new(s * 1.4, s * 0.8, s), CFrame.new(center.Position + Vector3.new(math.cos(ang) * r, y + 1.4, math.sin(ang) * r)) * CFrame.Angles(0, math.random() * 3, 0), C.Rock, Enum.Material.Slate, parent, "Rock").CanCollide = true
 	end
 	-- bushes
-	for _ = 1, 4 do
+	for _ = 1, 8 do
 		local ang = math.random() * math.pi * 2
-		local r = R * (0.3 + math.random() * 0.3)
+		local r = R * (0.5 + math.random() * 0.3)
 		local pos = center.Position + Vector3.new(math.cos(ang) * r, y + 3.4, math.sin(ang) * r)
 		for k = 1, 3 do
 			ellipsoid(Vector3.new(2.4, 1.8, 2.4), CFrame.new(pos + Vector3.new(math.random(-8, 8) / 10, 0, math.random(-8, 8) / 10)), (k == 2) and C.LeafDark or C.Leaf, Enum.Material.Grass, parent, "Bush")
 		end
 	end
 	-- campfire on the beach
-	local fc = center * CFrame.new(10, y + 3.2, -(R - 14))
+	local fc = center * CFrame.new(14, y + 3.2, -(R - 18))
 	for i = 1, 6 do
 		cyl(Vector3.new(0.8, 1, 1), fc * CFrame.Angles(0, i, 0) * CFrame.new(1.2, 0, 0), C.Rock, Enum.Material.Slate, parent, "FireRock")
 	end
@@ -278,9 +289,32 @@ function Builders.BuildProps(center: CFrame, R: number, parent: Instance)
 	pointLight(log, Color3.fromRGB(255, 160, 70), 18, 1.5)
 	-- barrels & crate by the dock
 	for i = 1, 2 do
-		cyl(Vector3.new(2.6, 2, 2), center * CFrame.new(-7 - i * 2.4, y + 4.3, -(R - 10)), C.Wood, Enum.Material.Wood, parent, "Barrel")
+		cyl(Vector3.new(2.6, 2, 2), center * CFrame.new(-9 - i * 2.4, y + 4.3, -(R - 12)), C.Wood, Enum.Material.Wood, parent, "Barrel")
 	end
-	part({ Name = "Crate", Size = Vector3.new(2.4, 2.4, 2.4), Color = C.WoodLight, Material = Enum.Material.WoodPlanks, Parent = parent, CFrame = center * CFrame.new(-6, y + 4.2, -(R - 14)) * CFrame.Angles(0, 0.4, 0) })
+	part({ Name = "Crate", Size = Vector3.new(2.4, 2.4, 2.4), Color = C.WoodLight, Material = Enum.Material.WoodPlanks, Parent = parent, CFrame = center * CFrame.new(-8, y + 4.2, -(R - 16)) * CFrame.Angles(0, 0.4, 0) })
+end
+
+-- Little fisherman's hut: plank walls, palm-thatch roof, a lantern
+function Builders.BuildHut(cf: CFrame, parent: Instance)
+	local m = Instance.new("Model")
+	m.Name = "Hut"
+	m.Parent = parent
+	part({ Name = "Floor", Size = Vector3.new(9, 0.6, 8), Color = C.WoodLight, Material = Enum.Material.WoodPlanks, Parent = m, CFrame = cf * CFrame.new(0, 0.3, 0) })
+	part({ Name = "WallBack", Size = Vector3.new(9, 6, 0.5), Color = C.Wood, Material = Enum.Material.WoodPlanks, Parent = m, CFrame = cf * CFrame.new(0, 3.3, 3.75) })
+	part({ Name = "WallL", Size = Vector3.new(0.5, 6, 8), Color = C.Wood, Material = Enum.Material.WoodPlanks, Parent = m, CFrame = cf * CFrame.new(-4.25, 3.3, 0) })
+	part({ Name = "WallR", Size = Vector3.new(0.5, 6, 8), Color = C.Wood, Material = Enum.Material.WoodPlanks, Parent = m, CFrame = cf * CFrame.new(4.25, 3.3, 0) })
+	part({ Name = "WallFront", Size = Vector3.new(2.5, 6, 0.5), Color = C.Wood, Material = Enum.Material.WoodPlanks, Parent = m, CFrame = cf * CFrame.new(-3.25, 3.3, -3.75) })
+	part({ Name = "WallFront", Size = Vector3.new(2.5, 6, 0.5), Color = C.Wood, Material = Enum.Material.WoodPlanks, Parent = m, CFrame = cf * CFrame.new(3.25, 3.3, -3.75) })
+	part({ Name = "Lintel", Size = Vector3.new(4.2, 1, 0.5), Color = C.Wood, Material = Enum.Material.WoodPlanks, Parent = m, CFrame = cf * CFrame.new(0, 5.8, -3.75) })
+	local win = part({ Name = "Window", Size = Vector3.new(0.3, 1.6, 2), Color = Color3.fromRGB(255, 220, 150), Material = Enum.Material.Neon, CanCollide = false, Parent = m, CFrame = cf * CFrame.new(4.3, 3.6, 1) })
+	pointLight(win, Color3.fromRGB(255, 210, 120), 10, 0.7)
+	for _, sx in ipairs({ -1, 1 }) do
+		local r = wedge({ Name = "Roof", Size = Vector3.new(10.5, 2.6, 4.8), Color = C.LeafDark, Material = Enum.Material.Grass, Parent = m })
+		r.CFrame = cf * CFrame.new(0, 7.4, sx * 2.4) * CFrame.Angles(0, sx == 1 and 0 or math.rad(180), 0)
+	end
+	part({ Name = "Ridge", Size = Vector3.new(10.8, 0.5, 0.8), Color = C.WoodDark, Material = Enum.Material.Wood, Parent = m, CFrame = cf * CFrame.new(0, 8.7, 0) })
+	cyl(Vector3.new(2, 1.6, 1.6), cf * CFrame.new(-5.8, 1.6, -2), C.WoodDark, Enum.Material.Wood, m, "Barrel")
+	return m
 end
 
 ----------------------------------------------------------------------
@@ -303,9 +337,9 @@ function Builders.BuildIsland(index: number, center: Vector3, parent: Instance):
 
 	Builders.BuildTerrainIsland(center, R)
 
-	for i = 1, 9 do
-		local ang = (i / 9) * math.pi * 2 + 0.3
-		local r = R * (0.72 + (i % 2) * 0.14)
+	for i = 1, 16 do
+		local ang = (i / 16) * math.pi * 2 + 0.3
+		local r = R * (0.68 + (i % 2) * 0.16)
 		Builders.BuildPalm(CFrame.new(center + Vector3.new(math.cos(ang) * r, y + 2.6, math.sin(ang) * r)), island)
 	end
 	local props = Instance.new("Model")
@@ -357,10 +391,24 @@ function Builders.BuildIsland(index: number, center: Vector3, parent: Instance):
 	spawn.CanCollide = false
 	spawn.Enabled = false
 	spawn.Neutral = true
-	spawn.CFrame = facing * CFrame.new(0, y + 5, -(R - 12))
+	spawn.CFrame = facing * CFrame.new(0, y + 5, -(R - 16))
 	spawn.Parent = island
 
-	Builders.BuildAquarium(island, facing * CFrame.new(-22, y + 3, -13))
+	-- shoreline fishing spots for hired fishers (and a few huts)
+	local spots = Instance.new("Folder")
+	spots.Name = "FisherSpots"
+	spots.Parent = island
+	for i = 1, 10 do
+		local ang = (i / 10) * math.pi * 2 + 0.15
+		local pos = center + Vector3.new(math.cos(ang) * R * 0.98, y + 1.6, math.sin(ang) * R * 0.98)
+		local sp = part({ Name = "Spot", Size = Vector3.new(1, 1, 1), Transparency = 1, CanCollide = false, Parent = spots, CFrame = CFrame.lookAt(pos, Vector3.new(pos.X * 2 - center.X, pos.Y, pos.Z * 2 - center.Z)) })
+		sp:SetAttribute("Index", i)
+	end
+	for i = 1, 3 do
+		local ang = (i / 3) * math.pi * 2 + 1.2
+		Builders.BuildHut(CFrame.new(center + Vector3.new(math.cos(ang) * R * 0.62, y + 3, math.sin(ang) * R * 0.62)) * CFrame.Angles(0, -ang + math.rad(90), 0), island)
+	end
+	Builders.BuildAquarium(island, facing * CFrame.new(-36, y + 3, -22))
 	Builders.BuildCastle(island, 0)
 
 	billboard(root, "Unclaimed Island", 40, 240, Color3.fromRGB(255, 240, 150), 180).Parent.Name = "OwnerSign"
@@ -374,7 +422,7 @@ function Builders.BuildAquarium(island: Model, cf: CFrame)
 	local aq = Instance.new("Model")
 	aq.Name = "Aquarium"
 	aq.Parent = island
-	local W, H, D = 14, 8, 9
+	local W, H, D = 20, 9, 12
 	part({ Name = "Base", Size = Vector3.new(W + 1.2, 1.2, D + 1.2), Color = C.StoneTrim, Material = Enum.Material.Slate, Parent = aq, CFrame = cf })
 	part({ Name = "Sand", Size = Vector3.new(W - 0.4, 0.5, D - 0.4), Color = Color3.fromRGB(240, 222, 170), Material = Enum.Material.Sand, Parent = aq, CFrame = cf * CFrame.new(0, 0.8, 0) })
 	local glass = part({ Name = "Glass", Size = Vector3.new(W, H, D), Color = C.Glass, Material = Enum.Material.Glass, Transparency = 0.6, Reflectance = 0.1, Parent = aq, CFrame = cf * CFrame.new(0, 0.6 + H / 2, 0) })
@@ -417,8 +465,15 @@ function Builders.BuildAquarium(island: Model, cf: CFrame)
 end
 
 ----------------------------------------------------------------------
--- CASTLE — hollow, enterable, with gate, ramps to the walls, manned cannons
+-- CASTLE — to-scale stone fortress: curtain walls with a walkway, gatehouse, four towers,
+-- a two-storey keep you can walk through, banners, braziers, manned cannons on the sea wall.
 ----------------------------------------------------------------------
+-- Points a cylinder's long (X) axis along `dir`
+local function aimCylinder(pos: Vector3, dir: Vector3): CFrame
+	return CFrame.lookAt(pos, pos + dir) * CFrame.Angles(0, math.rad(90), 0)
+end
+Builders.AimCylinder = aimCylinder
+
 function Builders.BuildCastle(island: Model, level: number, extraCannons: number?)
 	local old = island:FindFirstChild("Castle")
 	if old then old:Destroy() end
@@ -433,149 +488,228 @@ function Builders.BuildCastle(island: Model, level: number, extraCannons: number
 	castle:SetAttribute("HP", maxHP)
 	castle:SetAttribute("Level", level)
 
-	local growth = math.min(level, 8)
-	local half = 13 + growth * 0.3         -- outer wall half-width
-	local wallH = 10 + growth * 0.5
-	local wallT = 4                        -- thick enough to walk along
+	local growth = math.min(level, 10)
+	local half = 24 + growth * 0.5          -- outer wall half-width (48+ studs across)
+	local wallH = 14 + growth * 0.6          -- curtain wall height
+	local wallT = 5                          -- walkway width on top
 	local ground = y + 3
-	local base = facing * CFrame.new(0, ground, 11) -- castle centre, behind the beach
+	local base = facing * CFrame.new(0, ground, 16)  -- castle centre (behind the beach)
 	local stoneMat = Enum.Material.Cobblestone
+	local seaDir = base.LookVector           -- toward the dock / open sea
+	local function wall(size: Vector3, cf: CFrame, color: Color3?, mat: Enum.Material?): Part
+		return part({ Name = "Wall", Size = size, Color = color or C.Stone, Material = mat or stoneMat, Parent = castle, CFrame = cf })
+	end
+	local function trim(size: Vector3, cf: CFrame)
+		local t = part({ Name = "Trim", Size = size, Color = C.StoneTrim, Material = Enum.Material.Slate, Parent = castle, CFrame = cf })
+		t.CanCollide = false
+		return t
+	end
 
-	-- courtyard floor
+	-- courtyard
 	part({ Name = "Courtyard", Size = Vector3.new(half * 2, 0.4, half * 2), Color = C.StoneDark, Material = Enum.Material.Slate, Parent = castle, CFrame = base * CFrame.new(0, 0.2, 0) })
+	-- cobbled path from the gate to the keep
+	part({ Name = "Path", Size = Vector3.new(8, 0.45, half * 2), Color = Color3.fromRGB(185, 180, 170), Material = Enum.Material.Cobblestone, Parent = castle, CFrame = base * CFrame.new(0, 0.22, 0) })
 
-	-- walls: front (sea side, -Z) has a gate gap
-	local gateW = 10
-	local gateH = 9.5
-	local function wall(size: Vector3, cf: CFrame)
-		local w = part({ Name = "Wall", Size = size, Color = C.Stone, Material = stoneMat, Parent = castle, CFrame = cf })
-		return w
+	-- curtain walls (back + sides), with a stone string-course and a slightly darker plinth
+	local function curtain(size: Vector3, cf: CFrame)
+		wall(size, cf)
+		local plinth = size + Vector3.new((size.X > size.Z) and 0 or 0.6, -size.Y + 2.5, (size.X > size.Z) and 0.6 or 0)
+		wall(plinth, cf * CFrame.new(0, -size.Y / 2 + 1.25, 0), C.StoneDark)
+		local course = size + Vector3.new((size.X > size.Z) and 0 or 0.5, -size.Y + 0.6, (size.X > size.Z) and 0.5 or 0)
+		trim(course, cf * CFrame.new(0, size.Y / 2 - 1.5, 0))
 	end
-	-- back & sides
-	wall(Vector3.new(half * 2, wallH, wallT), base * CFrame.new(0, wallH / 2, half))
-	wall(Vector3.new(wallT, wallH, half * 2), base * CFrame.new(-half, wallH / 2, 0))
-	wall(Vector3.new(wallT, wallH, half * 2), base * CFrame.new(half, wallH / 2, 0))
-	-- front in two pieces + arch lintel over the gate
-	local sideLen = half - gateW / 2
-	wall(Vector3.new(sideLen, wallH, wallT), base * CFrame.new(-(gateW / 2 + sideLen / 2), wallH / 2, -half))
-	wall(Vector3.new(sideLen, wallH, wallT), base * CFrame.new((gateW / 2 + sideLen / 2), wallH / 2, -half))
-	if wallH > gateH then
-		wall(Vector3.new(gateW + 0.2, wallH - gateH, wallT), base * CFrame.new(0, gateH + (wallH - gateH) / 2, -half))
-	end
-	-- arch corners (wedges) to round the gate
-	for _, sx in ipairs({ -1, 1 }) do
-		local w = wedge({ Name = "Arch", Size = Vector3.new(wallT, 1.6, 1.6), Color = C.Stone, Material = stoneMat, Parent = castle })
-		w.CFrame = base * CFrame.new(sx * (gateW / 2 - 0.8), gateH - 0.8, -half) * CFrame.Angles(0, sx * math.rad(90), 0) * CFrame.Angles(0, 0, math.rad(180))
-	end
-	-- portcullis (raised, decorative) + gate torches
-	for i = -2, 2 do
-		part({ Name = "Bar", Size = Vector3.new(0.25, 2.2, 0.25), Color = C.Iron, Material = Enum.Material.Metal, CanCollide = false, Parent = castle, CFrame = base * CFrame.new(i * 1.6, gateH - 0.2, -half - 0.9) })
-	end
-	for _, sx in ipairs({ -1, 1 }) do
-		local torch = part({ Name = "Torch", Size = Vector3.new(0.5, 0.5, 0.5), Color = Color3.fromRGB(255, 190, 90), Material = Enum.Material.Neon, CanCollide = false, Parent = castle, CFrame = base * CFrame.new(sx * (gateW / 2 + 1.2), 4.5, -half - 1.7) })
-		local f = Instance.new("Fire"); f.Size = 2; f.Heat = 4; f.Parent = torch
-		pointLight(torch, Color3.fromRGB(255, 170, 80), 14, 1.2)
-	end
+	curtain(Vector3.new(half * 2, wallH, wallT), base * CFrame.new(0, wallH / 2, half))
+	curtain(Vector3.new(wallT, wallH, half * 2), base * CFrame.new(-half, wallH / 2, 0))
+	curtain(Vector3.new(wallT, wallH, half * 2), base * CFrame.new(half, wallH / 2, 0))
 
-	-- battlements on all outer edges
-	local step = 2.6
-	local function merlons(fromX: number, toX: number, z: number, alongX: boolean)
-		local n = math.floor(math.abs(toX - fromX) / step)
-		for i = 0, n do
-			local t = fromX + (toX - fromX) * (i / math.max(n, 1))
-			local pos = alongX and Vector3.new(t, wallH + 0.7, z) or Vector3.new(z, wallH + 0.7, t)
-			local m = part({ Name = "Merlon", Size = Vector3.new(1.4, 1.4, 1.4), Color = C.StoneDark, Material = stoneMat, Parent = castle, CFrame = base * CFrame.new(pos) })
-			m.CanCollide = true
+	-- gatehouse on the sea wall: two squat towers flanking a tall arch
+	local gateW, gateH = 12, 12
+	local sideLen = half - gateW / 2 - 5
+	curtain(Vector3.new(sideLen, wallH, wallT), base * CFrame.new(-(gateW / 2 + 5 + sideLen / 2), wallH / 2, -half))
+	curtain(Vector3.new(sideLen, wallH, wallT), base * CFrame.new((gateW / 2 + 5 + sideLen / 2), wallH / 2, -half))
+	for _, sx in ipairs({ -1, 1 }) do
+		local gx = sx * (gateW / 2 + 2.5)
+		wall(Vector3.new(5, wallH + 4, wallT + 2), base * CFrame.new(gx, (wallH + 4) / 2, -half))
+		-- arrow slits
+		for k = 1, 3 do
+			part({ Name = "Slit", Size = Vector3.new(0.5, 2.2, 0.3), Color = Color3.fromRGB(25, 25, 30), Material = Enum.Material.SmoothPlastic, CanCollide = false, Parent = castle, CFrame = base * CFrame.new(gx, 4 + k * 3.2, -half - wallT / 2 - 1.1) })
 		end
 	end
-	merlons(-half, half, half + wallT / 2 - 0.7, true)
-	merlons(-half, half, -half - wallT / 2 + 0.7, true)
-	merlons(-half, half, -half - wallT / 2 + 0.7, false)
-	merlons(-half, half, half + wallT / 2 - 0.7, false)
+	-- lintel over the gate + arch wedges
+	wall(Vector3.new(gateW + 0.4, wallH + 4 - gateH, wallT + 2), base * CFrame.new(0, gateH + (wallH + 4 - gateH) / 2, -half))
+	for _, sx in ipairs({ -1, 1 }) do
+		local w = wedge({ Name = "Arch", Size = Vector3.new(wallT + 2, 2.2, 2.2), Color = C.Stone, Material = stoneMat, Parent = castle })
+		w.CFrame = base * CFrame.new(sx * (gateW / 2 - 1.1), gateH - 1.1, -half) * CFrame.Angles(0, sx * math.rad(90), 0) * CFrame.Angles(0, 0, math.rad(180))
+	end
+	-- raised portcullis + chains + torches
+	for i = -3, 3 do
+		part({ Name = "Bar", Size = Vector3.new(0.3, 3, 0.3), Color = C.Iron, Material = Enum.Material.Metal, CanCollide = false, Parent = castle, CFrame = base * CFrame.new(i * 1.6, gateH + 0.2, -half - wallT / 2 - 0.2) })
+	end
+	part({ Name = "Bar", Size = Vector3.new(gateW - 0.5, 0.3, 0.3), Color = C.Iron, Material = Enum.Material.Metal, CanCollide = false, Parent = castle, CFrame = base * CFrame.new(0, gateH + 1.5, -half - wallT / 2 - 0.2) })
+	for _, sx in ipairs({ -1, 1 }) do
+		local torch = part({ Name = "Torch", Size = Vector3.new(0.6, 0.6, 0.6), Color = Color3.fromRGB(255, 190, 90), Material = Enum.Material.Neon, CanCollide = false, Parent = castle, CFrame = base * CFrame.new(sx * (gateW / 2 + 2.5), 7, -half - wallT / 2 - 1.6) })
+		local f = Instance.new("Fire"); f.Size = 3; f.Heat = 5; f.Parent = torch
+		pointLight(torch, Color3.fromRGB(255, 170, 80), 18, 1.3)
+		cyl(Vector3.new(1.2, 0.3, 0.3), base * CFrame.new(sx * (gateW / 2 + 2.5), 6.4, -half - wallT / 2 - 1.3) * CFrame.Angles(math.rad(90), 0, 0), C.Iron, Enum.Material.Metal, castle, "TorchBracket").CanCollide = false
+	end
 
-	-- corner towers (hollow look: solid with windows)
+	-- battlements (merlons) along the outer edge of every wall, plus a low inner parapet
+	local step = 3
+	local function merlonRun(x0: number, x1: number, z: number, alongX: boolean, h: number)
+		local n = math.max(1, math.floor(math.abs(x1 - x0) / step))
+		for i = 0, n do
+			local t = x0 + (x1 - x0) * (i / n)
+			local pos = alongX and Vector3.new(t, h + 1, z) or Vector3.new(z, h + 1, t)
+			part({ Name = "Merlon", Size = Vector3.new(1.8, 2, 1.8), Color = C.StoneDark, Material = stoneMat, Parent = castle, CFrame = base * CFrame.new(pos) })
+		end
+	end
+	local outer = half + wallT / 2 - 0.9
+	merlonRun(-half, half, outer, true, wallH)
+	merlonRun(-half, -(gateW / 2 + 5), -outer, true, wallH)
+	merlonRun((gateW / 2 + 5), half, -outer, true, wallH)
+	merlonRun(-half, half, -outer, false, wallH)
+	merlonRun(-half, half, outer, false, wallH)
+	merlonRun(-(gateW / 2 + 5), (gateW / 2 + 5), -outer - 1, true, wallH + 4)
+	for _, d in ipairs({ { 0, 1 }, { 1, 0 }, { -1, 0 } }) do
+		local inner = half - wallT / 2 + 0.3
+		local size = (d[1] == 0) and Vector3.new(half * 2, 1, 0.6) or Vector3.new(0.6, 1, half * 2)
+		local p = part({ Name = "Parapet", Size = size, Color = C.StoneDark, Material = stoneMat, Parent = castle, CFrame = base * CFrame.new(d[1] * inner, wallH + 0.5, d[2] * inner) })
+		p.CanCollide = true
+	end
+
+	-- corner towers: tall drums with windows, a lip, conical red roofs and a banner
 	for _, cx in ipairs({ -1, 1 }) do
 		for _, cz in ipairs({ -1, 1 }) do
 			local tcf = base * CFrame.new(cx * half, 0, cz * half)
-			local th = wallH + 4
-			cyl(Vector3.new(th, 6.5, 6.5), tcf * CFrame.new(0, th / 2, 0), C.Stone, stoneMat, castle, "Tower")
-			cyl(Vector3.new(0.8, 8, 8), tcf * CFrame.new(0, th + 0.3, 0), C.StoneDark, stoneMat, castle, "TowerLip")
-			-- conical roof from stacked cylinders
-			for k = 0, 4 do
-				cyl(Vector3.new(1.3, 7.2 - k * 1.5, 7.2 - k * 1.5), tcf * CFrame.new(0, th + 1.3 + k * 1.2, 0), C.RoofRed, Enum.Material.SmoothPlastic, castle, "Roof")
+			local th = wallH + 8
+			local td = 11
+			cyl(Vector3.new(th, td, td), tcf * CFrame.new(0, th / 2, 0), C.Stone, stoneMat, castle, "Tower")
+			cyl(Vector3.new(3, td + 0.8, td + 0.8), tcf * CFrame.new(0, 1.5, 0), C.StoneDark, stoneMat, castle, "TowerBase")
+			cyl(Vector3.new(1, td + 2, td + 2), tcf * CFrame.new(0, th + 0.4, 0), C.StoneDark, stoneMat, castle, "TowerLip")
+			for k = 0, 7 do
+				cyl(Vector3.new(1.6, td + 1.5 - k * 1.45, td + 1.5 - k * 1.45), tcf * CFrame.new(0, th + 1.6 + k * 1.5, 0), C.RoofRed, Enum.Material.SmoothPlastic, castle, "Roof")
 			end
-			local win = part({ Name = "Window", Size = Vector3.new(1, 1.6, 0.3), Color = Color3.fromRGB(255, 220, 150), Material = Enum.Material.Neon, CanCollide = false, Parent = castle, CFrame = tcf * CFrame.new(cx * -0.2, th * 0.6, cz * -3.3) })
-			pointLight(win, Color3.fromRGB(255, 210, 120), 10, 0.8)
+			-- spire + banner
+			cyl(Vector3.new(6, 0.4, 0.4), tcf * CFrame.new(0, th + 15, 0), C.WoodDark, Enum.Material.Wood, castle, "Spire").CanCollide = false
+			part({ Name = "Banner", Size = Vector3.new(0.15, 4, 2.6), Color = C.Gold, Material = Enum.Material.Fabric, CanCollide = false, Parent = castle, CFrame = tcf * CFrame.new(0.1, th + 15.5, 1.4) })
+			-- windows on two faces, three rows
+			for k = 1, 3 do
+				for _, face in ipairs({ Vector3.new(cx, 0, 0), Vector3.new(0, 0, cz) }) do
+					local wpos = tcf * CFrame.new(face * (td / 2 - 0.1) + Vector3.new(0, 4 + k * 4, 0))
+					local win = part({ Name = "Window", Size = Vector3.new(face.X ~= 0 and 0.4 or 1.4, 2.4, face.Z ~= 0 and 0.4 or 1.4), Color = Color3.fromRGB(255, 220, 150), Material = Enum.Material.Neon, CanCollide = false, Parent = castle, CFrame = wpos })
+					if k == 2 then pointLight(win, Color3.fromRGB(255, 210, 120), 12, 0.8) end
+				end
+			end
 		end
 	end
 
-	-- ramps up to the wall walkway (inside, along the side walls)
+	-- ramps up to the wall walk (two, inside the side walls), with a landing
 	for _, sx in ipairs({ -1, 1 }) do
-		local rampLen = wallH * 1.9
-		local r = wedge({ Name = "Ramp", Size = Vector3.new(3, wallH, rampLen), Color = C.StoneDark, Material = Enum.Material.Slate, Parent = castle })
-		r.CFrame = base * CFrame.new(sx * (half - wallT / 2 - 1.6), wallH / 2, half - rampLen / 2 - wallT / 2) * CFrame.Angles(0, math.rad(180), 0)
+		local rampLen = wallH * 2.2
+		local r = wedge({ Name = "Ramp", Size = Vector3.new(4, wallH, rampLen), Color = C.StoneDark, Material = Enum.Material.Slate, Parent = castle })
+		r.CFrame = base * CFrame.new(sx * (half - wallT / 2 - 2.2), wallH / 2, half - wallT / 2 - rampLen / 2) * CFrame.Angles(0, math.rad(180), 0)
+		part({ Name = "Landing", Size = Vector3.new(4, 0.6, 4), Color = C.StoneDark, Material = Enum.Material.Slate, Parent = castle, CFrame = base * CFrame.new(sx * (half - wallT / 2 - 2.2), wallH - 0.3, half - wallT / 2 - rampLen - 2) })
 	end
 
-	-- keep: a small hollow hall in the back of the courtyard with an open doorway
-	local kW, kD, kH = 12, 10, 9
-	local kcf = base * CFrame.new(0, 0, half - kD / 2 - wallT - 1)
-	local keep = part({ Name = "CastleRoot", Size = Vector3.new(kW, 0.3, kD), Color = C.StoneDark, Material = Enum.Material.Slate, Parent = castle, CFrame = kcf * CFrame.new(0, 0.35, 0) })
-	castle.PrimaryPart = keep
-	wall(Vector3.new(kW, kH, 1), kcf * CFrame.new(0, kH / 2, kD / 2))
-	wall(Vector3.new(1, kH, kD), kcf * CFrame.new(-kW / 2, kH / 2, 0))
-	wall(Vector3.new(1, kH, kD), kcf * CFrame.new(kW / 2, kH / 2, 0))
-	local doorW = 5
-	local doorH = 7.5
-	wall(Vector3.new((kW - doorW) / 2, kH, 1), kcf * CFrame.new(-(doorW / 2 + (kW - doorW) / 4), kH / 2, -kD / 2))
-	wall(Vector3.new((kW - doorW) / 2, kH, 1), kcf * CFrame.new((doorW / 2 + (kW - doorW) / 4), kH / 2, -kD / 2))
-	wall(Vector3.new(doorW + 0.2, kH - doorH, 1), kcf * CFrame.new(0, doorH + (kH - doorH) / 2, -kD / 2))
-	part({ Name = "KeepRoof", Size = Vector3.new(kW + 1, 0.8, kD + 1), Color = C.StoneDark, Material = stoneMat, Parent = castle, CFrame = kcf * CFrame.new(0, kH + 0.4, 0) })
-	-- inside: treasure chest + throne-ish bench, chandelier light
-	local chest = part({ Name = "Chest", Size = Vector3.new(2.2, 1.4, 1.4), Color = C.WoodDark, Material = Enum.Material.Wood, Parent = castle, CFrame = kcf * CFrame.new(0, 1.2, kD / 2 - 1.6) })
-	part({ Name = "ChestGold", Size = Vector3.new(1.8, 0.3, 1), Color = C.Gold, Material = Enum.Material.Neon, CanCollide = false, Parent = castle, CFrame = chest.CFrame * CFrame.new(0, 0.85, 0) })
-	local lamp = part({ Name = "KeepLamp", Size = Vector3.new(0.8, 0.8, 0.8), Color = Color3.fromRGB(255, 210, 120), Material = Enum.Material.Neon, CanCollide = false, Parent = castle, CFrame = kcf * CFrame.new(0, kH - 1, 0) })
-	pointLight(lamp, Color3.fromRGB(255, 200, 110), 16, 1.4)
-	-- flag on the keep
-	cyl(Vector3.new(7, 0.35, 0.35), kcf * CFrame.new(0, kH + 4, 0), C.WoodDark, Enum.Material.Wood, castle, "Pole").CanCollide = false
-	part({ Name = "Flag", Size = Vector3.new(3.6, 2.2, 0.15), Color = C.Gold, Material = Enum.Material.Fabric, CanCollide = false, Parent = castle, CFrame = kcf * CFrame.new(1.9, kH + 6.4, 0) })
+	-- braziers in the courtyard corners
+	for _, sx in ipairs({ -1, 1 }) do
+		local bcf = base * CFrame.new(sx * (half - 8), 0.4, -half + 10)
+		cyl(Vector3.new(2.5, 1.6, 1.6), bcf * CFrame.new(0, 1.25, 0), C.Iron, Enum.Material.Metal, castle, "Brazier")
+		local coals = part({ Name = "Coals", Size = Vector3.new(1.2, 0.4, 1.2), Color = Color3.fromRGB(255, 140, 60), Material = Enum.Material.Neon, CanCollide = false, Parent = castle, CFrame = bcf * CFrame.new(0, 2.6, 0) })
+		local f = Instance.new("Fire"); f.Size = 4; f.Heat = 8; f.Parent = coals
+		pointLight(coals, Color3.fromRGB(255, 160, 70), 20, 1.4)
+	end
 
-	-- cannons along the front wall top (manned via prompt, also auto-fire at hostiles)
+	-- THE KEEP: two storeys, ground hall with a doorway, upper floor via internal ramp, balcony over the courtyard
+	local kW, kD = 22, 16
+	local floorH = 9
+	local kH = floorH * 2
+	local kcf = base * CFrame.new(0, 0, half - kD / 2 - wallT - 3)
+	local keep = part({ Name = "CastleRoot", Size = Vector3.new(kW, 0.4, kD), Color = Color3.fromRGB(190, 170, 150), Material = Enum.Material.WoodPlanks, Parent = castle, CFrame = kcf * CFrame.new(0, 0.4, 0) })
+	castle.PrimaryPart = keep
+	local doorW, doorH = 6, 8
+	wall(Vector3.new(kW, kH, 1.5), kcf * CFrame.new(0, kH / 2, kD / 2))
+	wall(Vector3.new(1.5, kH, kD), kcf * CFrame.new(-kW / 2, kH / 2, 0))
+	wall(Vector3.new(1.5, kH, kD), kcf * CFrame.new(kW / 2, kH / 2, 0))
+	wall(Vector3.new((kW - doorW) / 2, kH, 1.5), kcf * CFrame.new(-(doorW / 2 + (kW - doorW) / 4), kH / 2, -kD / 2))
+	wall(Vector3.new((kW - doorW) / 2, kH, 1.5), kcf * CFrame.new((doorW / 2 + (kW - doorW) / 4), kH / 2, -kD / 2))
+	wall(Vector3.new(doorW + 0.3, kH - doorH, 1.5), kcf * CFrame.new(0, doorH + (kH - doorH) / 2, -kD / 2))
+	-- upper floor with a hole for the ramp
+	part({ Name = "UpperFloor", Size = Vector3.new(kW - 6, 0.6, kD - 1.5), Color = Color3.fromRGB(190, 170, 150), Material = Enum.Material.WoodPlanks, Parent = castle, CFrame = kcf * CFrame.new(3, floorH, 0) })
+	local kr = wedge({ Name = "KeepRamp", Size = Vector3.new(4, floorH - 0.6, kD - 2), Color = C.WoodDark, Material = Enum.Material.WoodPlanks, Parent = castle })
+	kr.CFrame = kcf * CFrame.new(-kW / 2 + 2.8, (floorH - 0.6) / 2 + 0.4, 0)
+	part({ Name = "UpperFloorStrip", Size = Vector3.new(6, 0.6, 3), Color = Color3.fromRGB(190, 170, 150), Material = Enum.Material.WoodPlanks, Parent = castle, CFrame = kcf * CFrame.new(-kW / 2 + 3, floorH, kD / 2 - 2) })
+	-- balcony over the courtyard
+	part({ Name = "Balcony", Size = Vector3.new(kW - 4, 0.6, 4), Color = C.StoneDark, Material = Enum.Material.Slate, Parent = castle, CFrame = kcf * CFrame.new(0, floorH, -kD / 2 - 2) })
+	part({ Name = "BalconyRail", Size = Vector3.new(kW - 4, 1.2, 0.4), Color = C.StoneTrim, Material = Enum.Material.Slate, Parent = castle, CFrame = kcf * CFrame.new(0, floorH + 0.9, -kD / 2 - 3.9) })
+	-- windows upstairs
+	for _, sx in ipairs({ -1, 1 }) do
+		for k = -1, 1 do
+			local w = part({ Name = "Window", Size = Vector3.new(0.4, 3, 1.6), Color = Color3.fromRGB(255, 220, 150), Material = Enum.Material.Neon, CanCollide = false, Parent = castle, CFrame = kcf * CFrame.new(sx * (kW / 2), floorH + 4.5, k * 5) })
+			if k == 0 then pointLight(w, Color3.fromRGB(255, 210, 120), 12, 0.8) end
+		end
+	end
+	-- roof: pitched, red, with a ridge and the flag
+	local roof = wedge({ Name = "KeepRoofA", Size = Vector3.new(kW + 2, 6, kD / 2 + 1), Color = C.RoofRed, Material = Enum.Material.SmoothPlastic, Parent = castle })
+	roof.CFrame = kcf * CFrame.new(0, kH + 3, kD / 4) * CFrame.Angles(0, math.rad(180), 0)
+	local roofB = wedge({ Name = "KeepRoofB", Size = Vector3.new(kW + 2, 6, kD / 2 + 1), Color = C.RoofRed, Material = Enum.Material.SmoothPlastic, Parent = castle })
+	roofB.CFrame = kcf * CFrame.new(0, kH + 3, -kD / 4)
+	part({ Name = "Ridge", Size = Vector3.new(kW + 2.4, 0.5, 0.8), Color = C.StoneTrim, Material = Enum.Material.Slate, Parent = castle, CFrame = kcf * CFrame.new(0, kH + 6.2, 0) })
+	cyl(Vector3.new(9, 0.4, 0.4), kcf * CFrame.new(0, kH + 10, 0), C.WoodDark, Enum.Material.Wood, castle, "Pole").CanCollide = false
+	part({ Name = "Flag", Size = Vector3.new(5, 3, 0.15), Color = C.Gold, Material = Enum.Material.Fabric, CanCollide = false, Parent = castle, CFrame = kcf * CFrame.new(2.6, kH + 13, 0) })
+	-- inside: throne, chest, rugs, chandelier
+	part({ Name = "Rug", Size = Vector3.new(8, 0.1, kD - 4), Color = Color3.fromRGB(160, 40, 50), Material = Enum.Material.Fabric, CanCollide = false, Parent = castle, CFrame = kcf * CFrame.new(0, 0.65, 0) })
+	local throne = part({ Name = "Throne", Size = Vector3.new(3, 4.5, 1), Color = C.Gold, Material = Enum.Material.Metal, Parent = castle, CFrame = kcf * CFrame.new(0, 2.85, kD / 2 - 1.5) })
+	part({ Name = "ThroneSeat", Size = Vector3.new(3, 1.6, 2), Color = Color3.fromRGB(160, 40, 50), Material = Enum.Material.Fabric, Parent = castle, CFrame = throne.CFrame * CFrame.new(0, -1.4, -1) })
+	local chest = part({ Name = "Chest", Size = Vector3.new(3, 1.8, 1.8), Color = C.WoodDark, Material = Enum.Material.Wood, Parent = castle, CFrame = kcf * CFrame.new(kW / 2 - 3, 1.3, kD / 2 - 2) })
+	part({ Name = "ChestGold", Size = Vector3.new(2.6, 0.3, 1.4), Color = C.Gold, Material = Enum.Material.Neon, CanCollide = false, Parent = castle, CFrame = chest.CFrame * CFrame.new(0, 1.05, 0) })
+	local lamp = part({ Name = "KeepLamp", Size = Vector3.new(1, 1, 1), Color = Color3.fromRGB(255, 210, 120), Material = Enum.Material.Neon, CanCollide = false, Parent = castle, CFrame = kcf * CFrame.new(0, floorH - 1.5, 0) })
+	pointLight(lamp, Color3.fromRGB(255, 200, 110), 22, 1.6)
+	local lamp2 = part({ Name = "KeepLamp", Size = Vector3.new(1, 1, 1), Color = Color3.fromRGB(255, 210, 120), Material = Enum.Material.Neon, CanCollide = false, Parent = castle, CFrame = kcf * CFrame.new(0, kH - 1.5, 0) })
+	pointLight(lamp2, Color3.fromRGB(255, 200, 110), 22, 1.6)
+
+	-- cannons along the sea wall walk (manned via E; auto-fire at hostiles too)
 	local cannons = Config.Stats.CastleCannons(level) + (extraCannons or 0)
 	local cannonFolder = Instance.new("Folder")
 	cannonFolder.Name = "Cannons"
 	cannonFolder.Parent = castle
+	local slots = {}
 	for i = 1, cannons do
-		local t = (cannons == 1) and 0 or ((i - 1) / (cannons - 1) - 0.5) * (half * 1.5)
-		local side = (i % 2 == 0) and 1 or -1
-		if cannons > 2 and math.abs(t) < gateW then t = side * (gateW / 2 + 2) end
-		local ccf = base * CFrame.new(t, wallH + 1.1, -half)
-		part({ Name = "Carriage", Size = Vector3.new(1.8, 1, 2.6), Color = C.WoodDark, Material = Enum.Material.Wood, Parent = cannonFolder, CFrame = ccf * CFrame.new(0, 0, 0) })
-		for _, sx in ipairs({ -1, 1 }) do
-			cyl(Vector3.new(0.3, 1.1, 1.1), ccf * CFrame.new(sx * 1.05, 0, 0) * CFrame.Angles(0, 0, math.rad(90)) * CFrame.Angles(0, 0, math.rad(-90)) * CFrame.Angles(0, math.rad(90), 0), C.Iron, Enum.Material.Metal, cannonFolder, "Wheel").CanCollide = false
+		local lane = math.ceil(i / 2)
+		local sx = (i % 2 == 1) and -1 or 1
+		table.insert(slots, sx * (gateW / 2 + 9 + (lane - 1) * 6))
+	end
+	for _, t in ipairs(slots) do
+		if math.abs(t) < half - 3 then
+			local ccf = base * CFrame.new(t, wallH + 1.2, -half + 0.3)
+			part({ Name = "Carriage", Size = Vector3.new(2.2, 1.2, 3.2), Color = C.WoodDark, Material = Enum.Material.Wood, Parent = cannonFolder, CFrame = ccf })
+			for _, wx in ipairs({ -1, 1 }) do
+				cyl(Vector3.new(0.4, 1.4, 1.4), ccf * CFrame.new(wx * 1.3, 0, 0.4) * CFrame.Angles(0, 0, 0), C.Iron, Enum.Material.Metal, cannonFolder, "Wheel").CanCollide = false
+			end
+			local muzzlePos = (ccf * CFrame.new(0, 0.9, -1)).Position
+			local barrel = part({ Name = "Cannon", Shape = Enum.PartType.Cylinder, Size = Vector3.new(4.4, 1.3, 1.3), Color = C.Cannon, Material = Enum.Material.Metal, CanCollide = false, Parent = cannonFolder, CFrame = aimCylinder(muzzlePos, (seaDir + Vector3.new(0, 0.08, 0)).Unit) })
+			barrel:SetAttribute("Muzzle", true)
+			barrel:SetAttribute("RestCFrame", barrel.CFrame)
+			barrel:SetAttribute("Pivot", muzzlePos)
+			local prompt = Instance.new("ProximityPrompt")
+			prompt.ActionText = "Man cannon"
+			prompt.ObjectText = "Cannon"
+			prompt.KeyboardKeyCode = Enum.KeyCode.E
+			prompt.HoldDuration = 0
+			prompt.MaxActivationDistance = 8
+			prompt.RequiresLineOfSight = false
+			prompt.Parent = barrel
+			CollectionService:AddTag(barrel, "ManualCannon")
 		end
-		local barrel = cyl(Vector3.new(3.6, 1.2, 1.2), ccf * CFrame.new(0, 0.7, -0.6) * CFrame.Angles(math.rad(90), 0, 0) * CFrame.Angles(0, 0, 0), C.Cannon, Enum.Material.Metal, cannonFolder, "Cannon")
-		barrel.CFrame = ccf * CFrame.new(0, 0.75, -0.8) * CFrame.Angles(math.rad(90) + math.rad(-6), 0, 0) * CFrame.Angles(0, 0, math.rad(-90))
-		barrel.CanCollide = false
-		barrel:SetAttribute("Muzzle", true)
-		barrel:SetAttribute("RestCFrame", barrel.CFrame)
-		local prompt = Instance.new("ProximityPrompt")
-		prompt.ActionText = "Fire!"
-		prompt.ObjectText = "Cannon"
-		prompt.KeyboardKeyCode = Enum.KeyCode.E
-		prompt.HoldDuration = 0
-		prompt.MaxActivationDistance = 7
-		prompt.RequiresLineOfSight = false
-		prompt.Parent = barrel
-		CollectionService:AddTag(barrel, "ManualCannon")
 	end
 
-	-- HP bar
+	-- HP bar over the keep
 	local bb = Instance.new("BillboardGui")
 	bb.Name = "HPBar"
 	bb.Size = UDim2.fromOffset(180, 20)
-	bb.StudsOffset = Vector3.new(0, kH + 9, 0)
+	bb.StudsOffset = Vector3.new(0, kH + 16, 0)
 	bb.AlwaysOnTop = true
-	bb.MaxDistance = 220
+	bb.MaxDistance = 260
 	bb.Parent = keep
 	local bg = Instance.new("Frame")
 	bg.Name = "BG"
@@ -602,9 +736,8 @@ function Builders.BuildCastle(island: Model, level: number, extraCannons: number
 	txt.Text = "Castle Lv " .. level
 	txt.Parent = bg
 
-	-- where pirates path to
-	part({ Name = "GateTarget", Size = Vector3.new(1, 1, 1), Transparency = 1, CanCollide = false, Parent = castle, CFrame = base * CFrame.new(0, 1, -half - 4) })
-	part({ Name = "KeepTarget", Size = Vector3.new(1, 1, 1), Transparency = 1, CanCollide = false, Parent = castle, CFrame = kcf * CFrame.new(0, 1, -kD / 2 - 2.5) })
+	part({ Name = "GateTarget", Size = Vector3.new(1, 1, 1), Transparency = 1, CanCollide = false, Parent = castle, CFrame = base * CFrame.new(0, 1, -half - 6) })
+	part({ Name = "KeepTarget", Size = Vector3.new(1, 1, 1), Transparency = 1, CanCollide = false, Parent = castle, CFrame = kcf * CFrame.new(0, 1, -kD / 2 - 3) })
 	return castle
 end
 
@@ -910,8 +1043,108 @@ local function buildRig(name: string, hpAmount: number, shirt: Color3, pants: Co
 	return m
 end
 
+-- Real R15 avatars built from a HumanoidDescription (server only). Falls back to the blocky rig if that fails.
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local function avatarRig(name: string, hpAmount: number, skin: Color3, shirt: Color3, pants: Color3, hatColor: Color3?, prop: string): Model
+	local m: Model? = nil
+	if RunService:IsServer() then
+		local ok, result = pcall(function()
+			local desc = Instance.new("HumanoidDescription")
+			desc.HeadColor = skin; desc.LeftArmColor = skin; desc.RightArmColor = skin
+			desc.TorsoColor = shirt
+			desc.LeftLegColor = pants; desc.RightLegColor = pants
+			desc.HeightScale = 1
+			desc.WidthScale = 1
+			desc.BodyTypeScale = 0.3
+			return Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
+		end)
+		if ok and result then m = result end
+	end
+	if not m then
+		return nil :: any
+	end
+	local model = m :: Model
+	model.Name = name
+	local hum = model:FindFirstChildOfClass("Humanoid") :: Humanoid
+	hum.MaxHealth = hpAmount
+	hum.Health = hpAmount
+	hum.WalkSpeed = Config.Pirates.WalkSpeed
+	hum.DisplayName = name
+	hum.HealthDisplayType = Enum.HumanoidHealthDisplayType.DisplayWhenDamaged
+	hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.Subject
+	hum.NameDisplayDistance = 22
+	hum.HealthDisplayDistance = 22
+	hum.BreakJointsOnDeath = false
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") then d.Anchored = false end
+	end
+	local head = model:FindFirstChild("Head") :: BasePart
+	-- hat (part) welded to the head
+	if hatColor then
+		local hat = Instance.new("Part")
+		hat.Name = "Hat"
+		hat.Size = (prop == "sword") and Vector3.new(2.6, 0.5, 1.8) or Vector3.new(2.2, 0.35, 2.2)
+		hat.Color = hatColor
+		hat.Material = Enum.Material.Fabric
+		hat.CanCollide = false
+		hat.Massless = true
+		hat.CFrame = head.CFrame * CFrame.new(0, 0.75, 0)
+		hat.Parent = model
+		local w = Instance.new("WeldConstraint"); w.Part0 = head; w.Part1 = hat; w.Parent = hat
+		if prop == "sword" then
+			local crown = Instance.new("Part")
+			crown.Name = "HatTop"
+			crown.Size = Vector3.new(1.6, 0.9, 1.4)
+			crown.Color = hatColor
+			crown.Material = Enum.Material.Fabric
+			crown.CanCollide = false
+			crown.Massless = true
+			crown.CFrame = hat.CFrame * CFrame.new(0, 0.6, 0)
+			crown.Parent = model
+			local w2 = Instance.new("WeldConstraint"); w2.Part0 = head; w2.Part1 = crown; w2.Parent = crown
+		else
+			local cone = Instance.new("Part")
+			cone.Name = "HatTop"
+			cone.Shape = Enum.PartType.Ball
+			cone.Size = Vector3.new(1.3, 0.9, 1.3)
+			cone.Color = hatColor
+			cone.Material = Enum.Material.Fabric
+			cone.CanCollide = false
+			cone.Massless = true
+			cone.CFrame = hat.CFrame * CFrame.new(0, 0.4, 0)
+			cone.Parent = model
+			local w2 = Instance.new("WeldConstraint"); w2.Part0 = head; w2.Part1 = cone; w2.Parent = cone
+		end
+	end
+	-- held prop in the right hand
+	local hand = model:FindFirstChild("RightHand") :: BasePart?
+	if hand then
+		local item = Instance.new("Part")
+		item.CanCollide = false
+		item.Massless = true
+		if prop == "sword" then
+			item.Name = "Sword"
+			item.Size = Vector3.new(0.3, 3.4, 0.5)
+			item.Color = Color3.fromRGB(230, 230, 240)
+			item.Material = Enum.Material.Metal
+			item.CFrame = hand.CFrame * CFrame.new(0, -1.2, 0) * CFrame.Angles(math.rad(90), 0, 0)
+		else
+			item.Name = "Rod"
+			item.Size = Vector3.new(0.2, 6, 0.2)
+			item.Color = C.Trunk
+			item.Material = Enum.Material.Wood
+			item.CFrame = hand.CFrame * CFrame.new(0, 1.6, -1.4) * CFrame.Angles(math.rad(35), 0, 0)
+		end
+		item.Parent = model
+		local w = Instance.new("WeldConstraint"); w.Part0 = hand; w.Part1 = item; w.Parent = item
+	end
+	return model
+end
+
 function Builders.BuildPirate(hpAmount: number): Model
-	local m = buildRig("Pirate", hpAmount, C.PirateShirt, Color3.fromRGB(70, 60, 50), C.Flag, "sword")
+	local m = avatarRig("Pirate", hpAmount, Color3.fromRGB(225, 180, 140), C.PirateShirt, Color3.fromRGB(60, 50, 45), C.Flag, "sword")
+	if not m then m = buildRig("Pirate", hpAmount, C.PirateShirt, Color3.fromRGB(70, 60, 50), C.Flag, "sword") end
 	m:SetAttribute("IsPirate", true)
 	return m
 end
@@ -919,9 +1152,11 @@ end
 function Builders.BuildVillager(kind: string, hpAmount: number, gearLevel: number): Model
 	local m
 	if kind == "Fisher" then
-		m = buildRig("Fisher", hpAmount, Color3.fromRGB(70, 160, 255), Color3.fromRGB(240, 220, 170), Color3.fromRGB(255, 220, 90), "rod")
+		m = avatarRig("Fisher", hpAmount, Color3.fromRGB(235, 190, 150), Color3.fromRGB(70, 160, 255), Color3.fromRGB(235, 215, 165), Color3.fromRGB(255, 220, 90), "rod")
+		if not m then m = buildRig("Fisher", hpAmount, Color3.fromRGB(70, 160, 255), Color3.fromRGB(240, 220, 170), Color3.fromRGB(255, 220, 90), "rod") end
 	else
-		m = buildRig("Guard", hpAmount, Color3.fromRGB(80, 200, 120), Color3.fromRGB(60, 60, 70), Color3.fromRGB(180, 180, 200), "sword")
+		m = avatarRig("Guard", hpAmount, Color3.fromRGB(225, 180, 140), Color3.fromRGB(80, 200, 120), Color3.fromRGB(60, 60, 70), Color3.fromRGB(180, 180, 200), "sword")
+		if not m then m = buildRig("Guard", hpAmount, Color3.fromRGB(80, 200, 120), Color3.fromRGB(60, 60, 70), Color3.fromRGB(180, 180, 200), "sword") end
 		local sword = m:FindFirstChild("Sword") :: BasePart?
 		if sword and gearLevel >= 5 then sword.Material = Enum.Material.Neon; sword.Color = Color3.fromRGB(120, 220, 255) end
 	end

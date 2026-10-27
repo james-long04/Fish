@@ -208,7 +208,7 @@ local function runCastleCannons()
 							if #targets > 0 then
 								local target = targets[math.random(#targets)]
 								local dir = (target.Position - c.Position)
-								CombatService.FireCannonball(CFrame.new(c.Position + dir.Unit * 2.5), dir, 70, Config.Stats.CastleDamage(level), nil, { castle })
+								CombatService.FireCannonball(CFrame.new(c.Position + dir.Unit * 3), dir, 90, Config.Stats.CastleDamage(level), nil, { castle })
 							end
 						end
 					end
@@ -284,57 +284,106 @@ local function giveCutlass(player: Player, char: Model)
 	tool.Parent = player.Backpack
 end
 
--- Manned castle cannons: press E at a cannon to take control; aim with the camera; click / F / FIRE to shoot.
-local manning: { [Player]: BasePart } = {}
+-- Manned castle cannons: E to take control. Client sends yaw/pitch; server turns the barrel
+-- (so everyone sees it) and fires on request. Player is held in place while manning.
+local manning: { [Player]: { barrel: BasePart, yaw: number, pitch: number, restDir: Vector3 } } = {}
 local lastManual: { [Player]: number } = {}
+local MAX_YAW = math.rad(80)
+
+local function setAnchored(player: Player, locked: boolean)
+	local char = player.Character
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	if hum then
+		hum.WalkSpeed = locked and 0 or 16
+		hum.JumpPower = locked and 0 or 50
+		hum.JumpHeight = locked and 0 or 7.2
+	end
+end
+
+local function aimDirOf(m): Vector3
+	local rest = m.restDir
+	local flat = Vector3.new(rest.X, 0, rest.Z).Unit
+	local yawed = (CFrame.fromAxisAngle(Vector3.yAxis, m.yaw) * flat)
+	return (yawed + Vector3.new(0, math.tan(m.pitch), 0)).Unit
+end
+
+local function updateBarrel(m)
+	local pivot = m.barrel:GetAttribute("Pivot") :: Vector3
+	m.barrel.CFrame = Builders.AimCylinder(pivot, aimDirOf(m))
+end
 
 local function leaveCannon(player: Player)
-	if manning[player] then
+	local m = manning[player]
+	if m then
 		manning[player] = nil
+		setAnchored(player, false)
 		Remotes.ManCannon:FireClient(player, nil)
 	end
 end
+CombatService.LeaveCannon = leaveCannon
 
 local function hookManualCannon(barrel: Instance)
 	if not barrel:IsA("BasePart") then return end
 	local prompt = barrel:FindFirstChildOfClass("ProximityPrompt")
 	if not prompt then return end
-	prompt.ActionText = "Man cannon"
 	prompt.Triggered:Connect(function(player: Player)
-		if manning[player] == barrel then
+		local cur = manning[player]
+		if cur and cur.barrel == barrel then
 			leaveCannon(player)
 			return
 		end
-		manning[player] = barrel
+		for _, other in pairs(manning) do
+			if other.barrel == barrel then return end -- someone else is on it
+		end
+		if cur then leaveCannon(player) end
+		local rest = barrel:GetAttribute("RestCFrame") :: CFrame
+		local restDir = rest.RightVector -- cylinder axis = X
+		local m = { barrel = barrel, yaw = 0, pitch = 0.08, restDir = restDir }
+		manning[player] = m
+		-- stand the player just behind the carriage
+		local char = player.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if hrp then
+			local pivot = barrel:GetAttribute("Pivot") :: Vector3
+			local flat = Vector3.new(restDir.X, 0, restDir.Z).Unit
+			hrp.CFrame = CFrame.lookAt(pivot - flat * 3.2 + Vector3.new(0, 1.2, 0), pivot + flat * 10)
+		end
+		setAnchored(player, true)
+		updateBarrel(m)
 		Remotes.ManCannon:FireClient(player, barrel)
-		Remotes.Notify:FireClient(player, "🎯 Aim with the camera • click, F or FIRE to shoot • E again to step away", Color3.fromRGB(120, 220, 255))
+	end)
+	prompt.Parent.AncestryChanged:Connect(function()
+		if not barrel:IsDescendantOf(Workspace) then
+			for pl, m in pairs(manning) do
+				if m.barrel == barrel then leaveCannon(pl) end
+			end
+		end
 	end)
 end
 
-function CombatService.FireManned(player: Player, aim: Vector3): boolean
-	local barrel = manning[player]
-	if not barrel or not barrel.Parent then return false end
-	local char = player.Character
-	local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
-	if not hrp or (hrp.Position - barrel.Position).Magnitude > 10 then
-		leaveCannon(player)
-		return false
-	end
+local function onAim(player: Player, yaw: any, pitch: any)
+	local m = manning[player]
+	if not m or type(yaw) ~= "number" or type(pitch) ~= "number" then return end
+	m.yaw = math.clamp(yaw, -MAX_YAW, MAX_YAW)
+	m.pitch = math.clamp(pitch, -0.2, 0.75)
+	updateBarrel(m)
+end
+
+function CombatService.FireManned(player: Player, _aim: Vector3?): boolean
+	local m = manning[player]
+	if not m or not m.barrel.Parent then return false end
 	if os.clock() - (lastManual[player] or 0) < 0.9 then return true end
 	lastManual[player] = os.clock()
-	local castle = barrel:FindFirstAncestor("Castle") :: Model
+	local castle = m.barrel:FindFirstAncestor("Castle") :: Model
 	local level = castle:GetAttribute("Level") :: number
 	local dmg = Config.Stats.CastleDamage(level)
-	-- clamp pitch so you can't shoot straight down through the wall
-	local dir = aim.Unit
-	local flat = Vector3.new(dir.X, 0, dir.Z)
-	if flat.Magnitude < 0.2 then flat = barrel.CFrame.LookVector end
-	local pitch = math.clamp(dir.Y, -0.25, 0.6)
-	dir = (flat.Unit + Vector3.new(0, pitch, 0)).Unit
-	-- swing the barrel to face the shot
-	local rest = barrel:GetAttribute("RestCFrame") :: CFrame
-	barrel.CFrame = CFrame.lookAt(rest.Position, rest.Position + dir) * CFrame.Angles(0, 0, math.rad(-90)) * CFrame.Angles(0, math.rad(90), 0)
-	CombatService.FireCannonball(CFrame.new(barrel.Position + dir * 3), dir, 110, dmg, player, { castle :: Instance, char :: Instance })
+	local dir = aimDirOf(m)
+	local pivot = m.barrel:GetAttribute("Pivot") :: Vector3
+	CombatService.FireCannonball(CFrame.new(pivot + dir * 3.2), dir, 120, dmg, player, { castle :: Instance, player.Character :: Instance })
+	-- recoil
+	local rest = m.barrel.CFrame
+	m.barrel.CFrame = rest * CFrame.new(-0.6, 0, 0)
+	task.delay(0.15, function() if m.barrel.Parent and manning[player] == m then updateBarrel(m) end end)
 	return true
 end
 
@@ -349,6 +398,7 @@ function CombatService.Start()
 	piratesFolder.Parent = Workspace
 
 	Players.PlayerRemoving:Connect(function(p) manning[p] = nil; lastManual[p] = nil end)
+	Remotes.AimCannon.OnServerEvent:Connect(onAim)
 	Players.PlayerAdded:Connect(function(player)
 		player.CharacterAdded:Connect(function(char)
 			leaveCannon(player)

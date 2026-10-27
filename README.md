@@ -17,6 +17,7 @@ ships, pirates) is generated from Parts when the server starts. Replace them wit
 - **Safe trading**: pick a player, both add fish, both confirm; any change resets confirms; server swaps atomically and checks tank space
 - **Raids only happen at night** — daytime is for fishing, building and sailing
 - **Real creature models**: every species gets a body plan (shark, ray, eel, octopus, turtle, crab, jellyfish, whale, seahorse, puffer, billfish, anglerfish, shellfish or generic fish) built from parts and animated swimming in the tank, with a name/income label when you walk up
+- **Villagers are real avatars** (R15, Roblox's default walk/idle animations). Fishers roam between ten shoreline spots, cast with a splash, and carry catches to your tank; guards patrol a loop around the castle and charge raiders
 - **Enterable castle**: open gate, courtyard, ramps up to the wall walk, cannons you fire yourself with E, a keep with a treasure chest inside; pirates path through the gate
 - **Island crew**: hire Fishers (auto-catch on a timer, into your tank) and Guards (patrol the castle, fight pirates and raiders) with coins; upgrade their rods and weapons without limit
 - Saving (DataStore), offline earnings, mobile-friendly HUD built in code
