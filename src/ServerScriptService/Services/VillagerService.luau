@@ -18,6 +18,7 @@ local IslandService = require(script.Parent.IslandService)
 local EconomyService = require(script.Parent.EconomyService)
 local CombatService = require(script.Parent.CombatService)
 local Monetization = require(script.Parent.MonetizationService)
+local FleetService = require(script.Parent.FleetService)
 
 local VillagerService = {}
 local folder: Folder
@@ -164,7 +165,12 @@ local function runGuard(player: Player, rig: Model, island: Model, waypoints: { 
 			local nearest, nd = nil, math.huge
 			for _, t in ipairs(targets) do
 				local d = (t.Position - hrp.Position).Magnitude
-				if d < nd then nearest, nd = t, d end
+				local isShip = t.Parent and t.Parent.Name:sub(1, 5) == "Ship_"
+				if d < nd and not isShip then nearest, nd = t, d end
+			end
+			if not nearest then
+				task.wait(0.5)
+				continue
 			end
 			if nearest then
 				hum.WalkSpeed = Config.Villagers.GuardWalkSpeed + 4
@@ -230,7 +236,10 @@ function VillagerService.Rebuild(player: Player)
 
 	local spotsFolder = island:FindFirstChild("FisherSpots")
 	local spots = spotsFolder and spotsFolder:GetChildren() or {}
-	for i = 1, profile.Villagers.Fishers do
+	local boats = math.floor(profile.Villagers.Fishers / Config.Villagers.BoatCrew)
+	local landFishers = profile.Villagers.Fishers - boats * Config.Villagers.BoatCrew
+	FleetService.Rebuild(player, boats)
+	for i = 1, landFishers do
 		local rig = Builders.BuildVillager("Fisher", 100, profile.Villagers.FisherRod)
 		local spot = (#spots > 0) and (spots[((i - 1) % #spots) + 1] :: BasePart) or nil
 		local pos = spot and spot.Position + Vector3.new(0, 4, 0) or (facing * CFrame.new((i % 2 == 0 and 1 or -1) * (8 + i * 2), y + 5, -(R - 10))).Position
@@ -282,7 +291,7 @@ local function onCrew(player: Player, action: string)
 	local v = profile.Villagers
 	local cost, label
 	if action == "HireFisher" then
-		if v.Fishers >= Config.Villagers.MaxPerType then EconomyService.Notify(player, "Your beach is full of fishers!", Color3.fromRGB(255, 180, 90)) return end
+		if v.Fishers >= Config.Villagers.MaxFishers then EconomyService.Notify(player, "You have a full fleet of fishers!", Color3.fromRGB(255, 180, 90)) return end
 		cost = Config.Villagers.HireCost("Fisher", v.Fishers); label = "Fisher hired!"
 	elseif action == "HireGuard" then
 		if v.Guards >= Config.Villagers.MaxPerType then EconomyService.Notify(player, "Your castle is full of guards!", Color3.fromRGB(255, 180, 90)) return end
@@ -320,6 +329,9 @@ function VillagerService.CrewStats(profile: DataService.Profile)
 		GuardDamage = Config.Villagers.GuardDamage(v.GuardWeapon),
 		GuardHP = Config.Villagers.GuardHP(v.GuardWeapon),
 		MaxPerType = Config.Villagers.MaxPerType,
+		MaxFishers = Config.Villagers.MaxFishers,
+		BoatCrew = Config.Villagers.BoatCrew,
+		Boats = math.floor(v.Fishers / Config.Villagers.BoatCrew),
 	}
 end
 
@@ -328,7 +340,7 @@ function VillagerService.Start()
 	folder.Name = "Villagers"
 	folder.Parent = Workspace
 	Remotes.Crew.OnServerEvent:Connect(onCrew)
-	Players.PlayerRemoving:Connect(clear)
+	Players.PlayerRemoving:Connect(function(p) clear(p); FleetService.Clear(p) end)
 end
 
 return VillagerService

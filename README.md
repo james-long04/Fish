@@ -21,6 +21,7 @@ ships, pirates) is generated from Parts when the server starts. Replace them wit
 - **Enterable castle**: open gate, courtyard, ramps up to the wall walk, cannons you fire yourself with E, a keep with a treasure chest inside; pirates path through the gate
 - **Sell fish** from the Tank panel (one, all of a species, or everything) for 90 seconds of that fish's income each
 - **Musket**: a 5th upgrade. Equip it from the hotbar and click to shoot — hitscan, tracer, headshots do 1.5×; damage, reload and range scale with level
+- **Fishing fleet**: every 5 fishers crew an AI copy of your ship. By day they sail to fishing grounds and fill your tank; at night they raid other players' islands (broadsides on the castle, loot goes to you) or patrol home shooting pirates. Sunk boats relaunch after 90s. Up to 50 fishers = 10 boats
 - **Island crew**: hire Fishers (auto-catch on a timer, into your tank) and Guards (patrol the castle, fight pirates and raiders) with coins; upgrade their rods and weapons without limit
 - Saving (DataStore), offline earnings, mobile-friendly HUD built in code
 

@@ -80,6 +80,16 @@ function CombatService.HostileTargets(island: Model, from: Vector3, range: numbe
 			table.insert(out, hrp)
 		end
 	end
+	-- enemy AI boats raiding this island
+	local shipsFolder = Workspace:FindFirstChild("Ships")
+	if shipsFolder then
+		for _, ship in ipairs(shipsFolder:GetChildren()) do
+			local hull = ship.PrimaryPart
+			if hull and ship:GetAttribute("AIRaidTarget") == island.Name and (ship:GetAttribute("HP") :: number) > 0 and (hull.Position - from).Magnitude <= range then
+				table.insert(out, hull)
+			end
+		end
+	end
 	local ownerId = island:GetAttribute("OwnerId")
 	for _, pl in ipairs(Players:GetPlayers()) do
 		if pl.UserId ~= ownerId and pl.Character then
@@ -95,7 +105,7 @@ end
 
 -- Fires a physical cannonball. onHit(hitPart) decides what takes damage.
 -- Raycast-stepped projectile: never tunnels, always registers a hit.
-function CombatService.FireCannonball(origin: CFrame, direction: Vector3, speed: number, damage: number, source: Player?, hitFilter: { Instance })
+function CombatService.FireCannonball(origin: CFrame, direction: Vector3, speed: number, damage: number, source: Player?, hitFilter: { Instance }, aiRaidIsland: string?)
 	local ball = Builders.BuildCannonball(origin)
 	ball.Anchored = true
 	ball.Parent = projectilesFolder
@@ -146,7 +156,7 @@ function CombatService.FireCannonball(origin: CFrame, direction: Vector3, speed:
 					if source == nil then
 						CombatService.DamageCastle(island, damage, nil)
 					elseif IslandService.GetOwner(island) ~= source then
-						local raiding = source.Character and source.Character:GetAttribute("Raiding") == island.Name
+						local raiding = (source.Character and source.Character:GetAttribute("Raiding") == island.Name) or (aiRaidIsland == island.Name)
 						if raiding then
 							CombatService.DamageCastle(island, damage, source)
 						else

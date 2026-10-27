@@ -34,6 +34,7 @@ local RaidService = require(Services.RaidService)
 local Monetization = require(Services.MonetizationService)
 local TradeService = require(Services.TradeService)
 local VillagerService = require(Services.VillagerService)
+local FleetService = require(Services.FleetService)
 
 DataService.Start()
 Monetization.Start()
@@ -47,6 +48,7 @@ ShipService.Start()
 RaidService.Start()
 TradeService.Start()
 VillagerService.Start()
+FleetService.Start()
 EconomyService.CrewStatsFn = VillagerService.CrewStats
 
 local function onPlayer(player: Player)

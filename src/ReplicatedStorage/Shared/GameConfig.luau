@@ -132,7 +132,9 @@ end
 
 -- Villagers: hire with coins, upgrade their gear with coins. Each upgrade applies to all villagers of that type.
 Config.Villagers = {
-	MaxPerType = 20,
+	MaxPerType = 20,      -- guards
+	MaxFishers = 50,
+	BoatCrew = 5,         -- every 5 fishers crew a boat (a copy of your ship)
 	HireCost = function(kind: string, owned: number): number
 		local base = (kind == "Fisher") and 150 or 220
 		return math.floor(base * (1.5 ^ owned))
@@ -150,6 +152,14 @@ Config.Villagers = {
 	GuardRange = 60,
 	GuardAttackInterval = 1.2,
 	GuardWalkSpeed = 15,
+}
+
+Config.Fleet = {
+	FishMinDist = 150, FishMaxDist = 320,      -- fishing grounds, distance from home island
+	CannonInterval = 3,
+	RaidStandoff = 95,                          -- how far from an enemy castle boats circle
+	RespawnSeconds = 90,
+	Damage = function(shipLevel: number): number return math.floor(10 * (1.25 ^ shipLevel)) end,
 }
 
 Config.Pirates = {
