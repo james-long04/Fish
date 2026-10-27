@@ -202,6 +202,7 @@ local function makePanel(title: string): (Frame, Frame)
 	body.Parent = p
 	local ll = Instance.new("UIListLayout")
 	ll.Padding = UDim.new(0, 8)
+	ll.SortOrder = Enum.SortOrder.LayoutOrder
 	ll.Parent = body
 	return p, body
 end
@@ -257,10 +258,13 @@ for _, kind in ipairs(Config.UpgradeOrder) do
 	shopRows[kind] = { lvl = lvl, cost = buy }
 end
 
-local aqHeader = label(aqBody, "0 / 10 fish", UDim2.new(1, -8, 0, 30), UDim2.new(), 20)
+local aqHeader = label(aqBody, "0 / 50 fish", UDim2.new(1, -8, 0, 30), UDim2.new(), 20)
+aqHeader.LayoutOrder = 1
 local aqSub = label(aqBody, "Discovered 0 / 300 species", UDim2.new(1, -8, 0, 22), UDim2.new(), 14)
+aqSub.LayoutOrder = 2
 aqSub.TextColor3 = Color3.fromRGB(200, 215, 235)
 local sellAllBtn = button(aqBody, "💰 Sell ALL fish", UDim2.new(1, -8, 0, 34), UDim2.new(), Color3.fromRGB(255, 150, 60))
+sellAllBtn.LayoutOrder = 3
 local sellConfirm = false
 sellAllBtn.MouseButton1Click:Connect(function()
 	if sellConfirm then
@@ -273,7 +277,8 @@ sellAllBtn.MouseButton1Click:Connect(function()
 		task.delay(3, function() sellConfirm = false; sellAllBtn.Text = "💰 Sell ALL fish" end)
 	end
 end)
-local sellHint = label(aqBody, "Tap a fish to sell one. Each sells for 90s of its income.", UDim2.new(1, -8, 0, 18), UDim2.new(), 12)
+local sellHint = label(aqBody, "Sorted by value. Tap a fish to sell one (90s of its income).", UDim2.new(1, -8, 0, 18), UDim2.new(), 12)
+sellHint.LayoutOrder = 4
 sellHint.TextColor3 = Color3.fromRGB(200, 215, 235)
 local aqRows: { [string]: Frame } = {}
 local function fishRow(parent: Instance, name: string, rarity: string, color: Color3, onTap: ((string) -> ())?): Frame
@@ -301,6 +306,10 @@ local function fishRow(parent: Instance, name: string, rarity: string, color: Co
 	inc.TextColor3 = COL.Green
 	local c = label(row, "x0", UDim2.new(0.3, 0, 0, 24), UDim2.new(0.42, 0, 0, 2), 18)
 	c.Name = "Count"
+	local tot = label(row, "", UDim2.new(0.3, 0, 0, 14), UDim2.new(0.42, 0, 0, 36), 10)
+	tot.Name = "Total"
+	tot.TextXAlignment = Enum.TextXAlignment.Right
+	tot.TextColor3 = COL.Accent
 	c.TextXAlignment = Enum.TextXAlignment.Right
 	if onTap then
 		local b = Instance.new("TextButton")
@@ -335,7 +344,10 @@ refreshAquarium = function(fish: { [string]: number })
 				end
 				(row:FindFirstChild("Count") :: TextLabel).Text = "x" .. tostring(count);
 				(row:FindFirstChild("Income") :: TextLabel).Text = "+" .. fmt(f.income) .. "/s each"
-				row.LayoutOrder = -math.floor(f.income * 100)
+				-- most valuable first (headers use 1-4)
+				row.LayoutOrder = 10 + math.max(0, 1000000000 - math.floor(f.income * 100))
+				local tot = row:FindFirstChild("Total") :: TextLabel?
+				if tot then tot.Text = "= " .. fmt(f.income * count) .. "/s" end
 			end
 		end
 	end
