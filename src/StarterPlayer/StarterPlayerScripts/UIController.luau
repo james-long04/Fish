@@ -733,8 +733,8 @@ local function refreshCrew(c, coins: number)
 		if coins >= cost then r.buy.BackgroundColor3 = (action:find("Fisher") or action == "UpgradeRods") and COL.Blue or COL.Green end
 		r.desc.Text = desc
 	end
-	setRow("HireFisher", string.format("%d / %d  •  %d boat%s", c.Fishers, c.MaxFishers or 50, c.Boats or 0, (c.Boats or 0) == 1 and "" or "s"), c.HireFisherCost,
-		string.format("Lands a fish every %ds. Every %d fishers crew a copy of your ship that fishes at sea, shoots pirates and raids at night by itself.", math.floor(c.FisherInterval), c.BoatCrew or 5))
+	setRow("HireFisher", string.format("%d/%d shore • %d/%d boats", c.ShoreFishers or 0, c.MaxShoreFishers or 50, c.Boats or 0, c.MaxBoats or 10), c.HireFisherCost,
+		string.format("Lands a fish every %ds. First %d fish from the beach; after that every %d crew a copy of your ship that fishes at sea, shoots pirates and raids at night.", math.floor(c.FisherInterval), c.MaxShoreFishers or 50, c.BoatCrew or 5))
 	setRow("UpgradeRods", "Lv " .. c.FisherRod, c.RodCost,
 		"Faster catches and rarer fish for every fisher you own. No cap.")
 	setRow("HireGuard", string.format("%d / %d", c.Guards, c.MaxPerType), c.HireGuardCost,

@@ -236,8 +236,8 @@ function VillagerService.Rebuild(player: Player)
 
 	local spotsFolder = island:FindFirstChild("FisherSpots")
 	local spots = spotsFolder and spotsFolder:GetChildren() or {}
-	local boats = math.floor(profile.Villagers.Fishers / Config.Villagers.BoatCrew)
-	local landFishers = profile.Villagers.Fishers - boats * Config.Villagers.BoatCrew
+	local landFishers = math.min(profile.Villagers.Fishers, Config.Villagers.MaxShoreFishers)
+	local boats = math.min(Config.Villagers.MaxBoats, math.floor((profile.Villagers.Fishers - landFishers) / Config.Villagers.BoatCrew))
 	FleetService.Rebuild(player, boats)
 	for i = 1, landFishers do
 		local rig = Builders.BuildVillager("Fisher", 100, profile.Villagers.FisherRod)
@@ -331,7 +331,10 @@ function VillagerService.CrewStats(profile: DataService.Profile)
 		MaxPerType = Config.Villagers.MaxPerType,
 		MaxFishers = Config.Villagers.MaxFishers,
 		BoatCrew = Config.Villagers.BoatCrew,
-		Boats = math.floor(v.Fishers / Config.Villagers.BoatCrew),
+		Boats = math.min(Config.Villagers.MaxBoats, math.floor(math.max(0, v.Fishers - Config.Villagers.MaxShoreFishers) / Config.Villagers.BoatCrew)),
+		MaxBoats = Config.Villagers.MaxBoats,
+		ShoreFishers = math.min(v.Fishers, Config.Villagers.MaxShoreFishers),
+		MaxShoreFishers = Config.Villagers.MaxShoreFishers,
 	}
 end
 

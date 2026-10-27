@@ -133,8 +133,10 @@ end
 -- Villagers: hire with coins, upgrade their gear with coins. Each upgrade applies to all villagers of that type.
 Config.Villagers = {
 	MaxPerType = 20,      -- guards
-	MaxFishers = 50,
-	BoatCrew = 5,         -- every 5 fishers crew a boat (a copy of your ship)
+	MaxShoreFishers = 50, -- first 50 fish from the island
+	BoatCrew = 5,         -- after that, every 5 crew a boat (a copy of your ship)
+	MaxBoats = 10,
+	MaxFishers = 50 + 5 * 10,
 	HireCost = function(kind: string, owned: number): number
 		local base = (kind == "Fisher") and 150 or 220
 		return math.floor(base * (1.5 ^ owned))
