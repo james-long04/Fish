@@ -75,7 +75,7 @@ function IslandService.UpdateAquariumDisplay(player: Player)
 	end
 	table.sort(list, function(a, b) return a.income > b.income end)
 	local trimmed = {}
-	for i = 1, math.min(#list, 16) do table.insert(trimmed, { name = list[i].name, count = list[i].count }) end
+	for i = 1, math.min(#list, 28) do table.insert(trimmed, { name = list[i].name, count = list[i].count }) end
 	aq:SetAttribute("FishJSON", HttpService:JSONEncode(trimmed))
 end
 

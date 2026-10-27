@@ -11,7 +11,7 @@ local Config = require(ReplicatedStorage.Shared.GameConfig)
 local FishModels = require(ReplicatedStorage.Shared.FishModels)
 
 local Renderer = {}
-local MAX_PER_TANK = 16
+local MAX_PER_TANK = 28
 local RENDER_DISTANCE = 160
 
 type Swimmer = {
@@ -73,7 +73,7 @@ local function buildTank(aq: Model)
 	for _, item in ipairs(list) do
 		local def = Config.FishByName(item.name)
 		if def then
-			for _ = 1, math.min(item.count, 3) do
+			for _ = 1, math.min(item.count, 4) do
 				if shown >= MAX_PER_TANK then break end
 				shown += 1
 				local scale = FishModels.ScaleFor(def)

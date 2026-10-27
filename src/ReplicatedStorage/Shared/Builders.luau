@@ -407,7 +407,7 @@ function Builders.BuildIsland(index: number, center: Vector3, parent: Instance):
 	for _, hp in ipairs({ { -46, 6, 90 }, { 46, 6, -90 }, { 0, 50, 180 } }) do
 		Builders.BuildHut(facing * CFrame.new(hp[1], y + 3, hp[2]) * CFrame.Angles(0, math.rad(hp[3]), 0), island)
 	end
-	Builders.BuildAquarium(island, facing * CFrame.new(-36, y + 3, -22))
+	Builders.BuildAquarium(island, facing * CFrame.new(-38, y + 3, -24))
 	Builders.BuildCastle(island, 0)
 
 	billboard(root, "Unclaimed Island", 40, 240, Color3.fromRGB(255, 240, 150), 180).Parent.Name = "OwnerSign"
@@ -421,45 +421,126 @@ function Builders.BuildAquarium(island: Model, cf: CFrame)
 	local aq = Instance.new("Model")
 	aq.Name = "Aquarium"
 	aq.Parent = island
-	local W, H, D = 20, 9, 12
-	part({ Name = "Base", Size = Vector3.new(W + 1.2, 1.2, D + 1.2), Color = C.StoneTrim, Material = Enum.Material.Slate, Parent = aq, CFrame = cf })
-	part({ Name = "Sand", Size = Vector3.new(W - 0.4, 0.5, D - 0.4), Color = Color3.fromRGB(240, 222, 170), Material = Enum.Material.Sand, Parent = aq, CFrame = cf * CFrame.new(0, 0.8, 0) })
-	local glass = part({ Name = "Glass", Size = Vector3.new(W, H, D), Color = C.Glass, Material = Enum.Material.Glass, Transparency = 0.6, Reflectance = 0.1, Parent = aq, CFrame = cf * CFrame.new(0, 0.6 + H / 2, 0) })
-	local water = part({ Name = "Water", Size = Vector3.new(W - 0.5, H - 0.9, D - 0.5), Color = Color3.fromRGB(70, 200, 245), Material = Enum.Material.Glass, Transparency = 0.82, CanCollide = false, Parent = aq, CFrame = cf * CFrame.new(0, 0.55 + H / 2, 0) })
-	water:SetAttribute("Inner", Vector3.new(W - 2, H - 2.4, D - 2))
-	-- frame edges
+	local W, H, D = 26, 11, 14
+	local trimC = Color3.fromRGB(60, 56, 54)
+	local brass = Color3.fromRGB(200, 160, 70)
+
+	-- stone plinth with steps, brass-edged
+	part({ Name = "Plinth", Size = Vector3.new(W + 6, 1.4, D + 6), Color = C.StoneDark, Material = Enum.Material.Slate, Parent = aq, CFrame = cf * CFrame.new(0, 0.1, 0) })
+	part({ Name = "Step", Size = Vector3.new(W + 10, 0.7, D + 10), Color = C.Stone, Material = Enum.Material.Cobblestone, Parent = aq, CFrame = cf * CFrame.new(0, -0.6, 0) })
+	part({ Name = "Base", Size = Vector3.new(W + 1.6, 1.2, D + 1.6), Color = trimC, Material = Enum.Material.Metal, Parent = aq, CFrame = cf * CFrame.new(0, 1.4, 0) })
+	part({ Name = "BaseTrim", Size = Vector3.new(W + 1.8, 0.25, D + 1.8), Color = brass, Material = Enum.Material.Metal, CanCollide = false, Parent = aq, CFrame = cf * CFrame.new(0, 2.05, 0) })
+
+	-- tank
+	local floorY = 2.1
+	part({ Name = "Sand", Size = Vector3.new(W - 0.4, 0.6, D - 0.4), Color = Color3.fromRGB(240, 222, 170), Material = Enum.Material.Sand, Parent = aq, CFrame = cf * CFrame.new(0, floorY + 0.3, 0) })
+	local glass = part({ Name = "Glass", Size = Vector3.new(W, H, D), Color = Color3.fromRGB(170, 240, 255), Material = Enum.Material.Glass, Transparency = 0.72, Reflectance = 0.08, Parent = aq, CFrame = cf * CFrame.new(0, floorY + H / 2, 0) })
+	local water = part({ Name = "Water", Size = Vector3.new(W - 0.5, H - 1.2, D - 0.5), Color = Color3.fromRGB(60, 190, 240), Material = Enum.Material.Glass, Transparency = 0.86, CanCollide = false, Parent = aq, CFrame = cf * CFrame.new(0, floorY + (H - 1.2) / 2 + 0.3, 0) })
+	water:SetAttribute("Inner", Vector3.new(W - 3, H - 3.5, D - 3))
+	-- water surface shimmer
+	local surface = part({ Name = "Surface", Size = Vector3.new(W - 0.6, 0.15, D - 0.6), Color = Color3.fromRGB(190, 245, 255), Material = Enum.Material.Glass, Transparency = 0.6, CanCollide = false, Parent = aq, CFrame = cf * CFrame.new(0, floorY + H - 0.9, 0) })
+	surface.Reflectance = 0.25
+
+	-- dark frame posts + top rail + brass corner caps
 	for _, sx in ipairs({ -1, 1 }) do
 		for _, sz in ipairs({ -1, 1 }) do
-			part({ Name = "Frame", Size = Vector3.new(0.5, H + 0.4, 0.5), Color = C.StoneTrim, Material = Enum.Material.Metal, Parent = aq, CFrame = cf * CFrame.new(sx * W / 2, 0.6 + H / 2, sz * D / 2) })
+			part({ Name = "Frame", Size = Vector3.new(0.7, H + 0.6, 0.7), Color = trimC, Material = Enum.Material.Metal, Parent = aq, CFrame = cf * CFrame.new(sx * W / 2, floorY + H / 2, sz * D / 2) })
+			part({ Name = "Cap", Shape = Enum.PartType.Ball, Size = Vector3.new(1.1, 1.1, 1.1), Color = brass, Material = Enum.Material.Metal, CanCollide = false, Parent = aq, CFrame = cf * CFrame.new(sx * W / 2, floorY + H + 0.6, sz * D / 2) })
 		end
+		part({ Name = "Rail", Size = Vector3.new(0.5, 0.5, D), Color = trimC, Material = Enum.Material.Metal, CanCollide = false, Parent = aq, CFrame = cf * CFrame.new(sx * W / 2, floorY + H, 0) })
+		part({ Name = "Rail", Size = Vector3.new(W, 0.5, 0.5), Color = trimC, Material = Enum.Material.Metal, CanCollide = false, Parent = aq, CFrame = cf * CFrame.new(0, floorY + H, sx * D / 2) })
+		part({ Name = "RailMid", Size = Vector3.new(0.5, 0.5, D), Color = trimC, Material = Enum.Material.Metal, CanCollide = false, Parent = aq, CFrame = cf * CFrame.new(sx * W / 2, floorY + H / 2, 0) })
 	end
-	part({ Name = "Lid", Size = Vector3.new(W + 0.8, 0.5, D + 0.8), Color = C.StoneTrim, Material = Enum.Material.Metal, Parent = aq, CFrame = cf * CFrame.new(0, H + 0.9, 0) })
-	-- decor: coral + plants + bubbles + light
-	for i = 1, 6 do
-		local px, pz = math.random(-W / 2 + 2, W / 2 - 2), math.random(-D / 2 + 2, D / 2 - 2)
-		local h = 1 + math.random() * 2
-		local col = ({ Color3.fromRGB(255, 110, 140), Color3.fromRGB(255, 170, 60), Color3.fromRGB(170, 90, 255), Color3.fromRGB(80, 230, 150) })[(i % 4) + 1]
-		ellipsoid(Vector3.new(1.2, h, 1.2), cf * CFrame.new(px, 1 + h / 2, pz), col, Enum.Material.Neon, aq, "Coral")
-		ellipsoid(Vector3.new(0.6, h * 0.8, 0.6), cf * CFrame.new(px + 0.6, 1 + h * 0.4, pz - 0.4), col, Enum.Material.Neon, aq, "Coral")
+	-- glass lid, slightly tinted, with a hood that hides the lights
+	part({ Name = "Lid", Size = Vector3.new(W + 0.4, 0.3, D + 0.4), Color = Color3.fromRGB(170, 240, 255), Material = Enum.Material.Glass, Transparency = 0.5, Parent = aq, CFrame = cf * CFrame.new(0, floorY + H + 0.2, 0) })
+	local hood = part({ Name = "Hood", Size = Vector3.new(W + 1.6, 1.2, D + 1.6), Color = trimC, Material = Enum.Material.Metal, Parent = aq, CFrame = cf * CFrame.new(0, floorY + H + 0.95, 0) })
+	part({ Name = "HoodTrim", Size = Vector3.new(W + 1.8, 0.25, D + 1.8), Color = brass, Material = Enum.Material.Metal, CanCollide = false, Parent = aq, CFrame = cf * CFrame.new(0, floorY + H + 1.6, 0) })
+	-- light strip under the hood (cool blue), plus two warm spots
+	local strip = part({ Name = "LightStrip", Size = Vector3.new(W - 2, 0.15, 1), Color = Color3.fromRGB(180, 240, 255), Material = Enum.Material.Neon, CanCollide = false, Parent = aq, CFrame = cf * CFrame.new(0, floorY + H + 0.3, 0) })
+	local sl = Instance.new("SurfaceLight")
+	sl.Face = Enum.NormalId.Bottom
+	sl.Color = Color3.fromRGB(150, 220, 255)
+	sl.Brightness = 1.2
+	sl.Range = H + 4
+	sl.Angle = 120
+	sl.Parent = strip
+	pointLight(water, Color3.fromRGB(90, 200, 255), 18, 0.35)
+
+	-- seabed decor: rock arch, coral clusters, sea plants, a sunken chest, shells, a sand slope at the back
+	local function coral(pos: Vector3, col: Color3, size: number)
+		for k = 1, 4 do
+			local a = k * 1.6
+			ellipsoid(Vector3.new(size * 0.45, size * (0.8 + (k % 3) * 0.3), size * 0.45), cf * CFrame.new(pos.X + math.cos(a) * size * 0.3, floorY + 0.6 + size * 0.45, pos.Z + math.sin(a) * size * 0.3) * CFrame.Angles(math.rad(10) * k, 0, math.rad(-8) * k), col, Enum.Material.SmoothPlastic, aq, "Coral")
+		end
+		local glow = ellipsoid(Vector3.new(size * 0.5, size * 0.5, size * 0.5), cf * CFrame.new(pos.X, floorY + 0.6 + size * 0.5, pos.Z), col, Enum.Material.Neon, aq, "CoralGlow")
+		glow.Transparency = 0.35
 	end
-	local bubbleEmitter = Instance.new("Attachment")
-	bubbleEmitter.Position = Vector3.new(W / 2 - 2, -H / 2 + 1.2, 0)
-	bubbleEmitter.Parent = water
-	local pe = Instance.new("ParticleEmitter")
-	pe.Texture = "rbxassetid://6071575925"
-	pe.Rate = 6
-	pe.Lifetime = NumberRange.new(2.5, 3.5)
-	pe.Speed = NumberRange.new(1.5, 2.2)
-	pe.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 0.45) })
-	pe.Transparency = NumberSequence.new(0.4)
-	pe.Color = ColorSequence.new(Color3.fromRGB(220, 250, 255))
-	pe.LightEmission = 0.4
-	pe.Parent = bubbleEmitter
-	pointLight(water, Color3.fromRGB(120, 220, 255), 14, 0.8)
+	coral(Vector3.new(-W / 2 + 4, 0, -D / 2 + 3.5), Color3.fromRGB(255, 110, 140), 2.2)
+	coral(Vector3.new(W / 2 - 5, 0, D / 2 - 3.5), Color3.fromRGB(255, 170, 60), 2.6)
+	coral(Vector3.new(W / 2 - 4, 0, -D / 2 + 4), Color3.fromRGB(170, 90, 255), 1.8)
+	coral(Vector3.new(-W / 2 + 7, 0, D / 2 - 4), Color3.fromRGB(80, 230, 150), 2.0)
+	-- kelp / sea plants (tall thin neon-green blades)
+	for i = 1, 9 do
+		local px = -W / 2 + 3 + (i - 1) * ((W - 6) / 8)
+		local pz = (i % 2 == 0) and D / 2 - 2.2 or -D / 2 + 2.2
+		local h = 3 + (i % 3) * 1.6
+		local blade = part({ Name = "Kelp", Size = Vector3.new(0.5, h, 0.12), Color = Color3.fromRGB(70, 200, 110), Material = Enum.Material.Grass, CanCollide = false, Parent = aq, CFrame = cf * CFrame.new(px, floorY + 0.6 + h / 2, pz) * CFrame.Angles(0, i * 0.7, math.rad(6)) })
+		blade.CastShadow = false
+	end
+	-- rock arch in the middle for fish to swim through
+	local arcC = Vector3.new(0, 0, 0)
+	for _, sx in ipairs({ -1, 1 }) do
+		ellipsoid(Vector3.new(2.4, 4.2, 2.6), cf * CFrame.new(arcC.X + sx * 3, floorY + 2.4, arcC.Z), C.Rock, Enum.Material.Slate, aq, "ArchRock")
+	end
+	ellipsoid(Vector3.new(8.5, 2.2, 2.8), cf * CFrame.new(arcC.X, floorY + 4.9, arcC.Z), C.Rock, Enum.Material.Slate, aq, "ArchTop")
+	-- sunken chest
+	local chest = part({ Name = "SunkChest", Size = Vector3.new(2.4, 1.5, 1.5), Color = C.WoodDark, Material = Enum.Material.Wood, CanCollide = false, Parent = aq, CFrame = cf * CFrame.new(W / 2 - 8, floorY + 1.3, 0) * CFrame.Angles(0, 0.6, math.rad(-12)) })
+	part({ Name = "SunkGold", Size = Vector3.new(2, 0.25, 1.1), Color = C.Gold, Material = Enum.Material.Neon, CanCollide = false, Parent = aq, CFrame = chest.CFrame * CFrame.new(0, 0.85, 0) })
+	-- shells & pebbles
+	for i = 1, 8 do
+		local px = -W / 2 + 2 + ((i * 7.3) % (W - 4))
+		local pz = -D / 2 + 2 + ((i * 4.1) % (D - 4))
+		ellipsoid(Vector3.new(0.8, 0.35, 0.6), cf * CFrame.new(px, floorY + 0.7, pz) * CFrame.Angles(0, i, 0), (i % 2 == 0) and Color3.fromRGB(250, 240, 225) or Color3.fromRGB(150, 145, 150), Enum.Material.SmoothPlastic, aq, "Pebble")
+	end
+	-- bubbles from two air stones
+	for _, bx in ipairs({ -W / 2 + 2.5, W / 2 - 2.5 }) do
+		local att = Instance.new("Attachment")
+		att.Position = Vector3.new(bx, -(H - 1.2) / 2 + 0.6, 0)
+		att.Parent = water
+		local pe = Instance.new("ParticleEmitter")
+		pe.Texture = "rbxassetid://6071575925"
+		pe.Rate = 5
+		pe.Lifetime = NumberRange.new(2.6, 3.6)
+		pe.Speed = NumberRange.new(1.6, 2.4)
+		pe.SpreadAngle = Vector2.new(8, 8)
+		pe.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.15), NumberSequenceKeypoint.new(1, 0.4) })
+		pe.Transparency = NumberSequence.new(0.45)
+		pe.Color = ColorSequence.new(Color3.fromRGB(220, 250, 255))
+		pe.LightEmission = 0.4
+		pe.Parent = att
+	end
+	-- caustic sparkle drifting across the sand
+	local sparkAtt = Instance.new("Attachment")
+	sparkAtt.Position = Vector3.new(0, -(H - 1.2) / 2 + 0.5, 0)
+	sparkAtt.Parent = water
+	local sparkle = Instance.new("ParticleEmitter")
+	sparkle.Texture = "rbxassetid://6071575925"
+	sparkle.Rate = 8
+	sparkle.Lifetime = NumberRange.new(1.5, 2.5)
+	sparkle.Speed = NumberRange.new(0.2, 0.6)
+	sparkle.SpreadAngle = Vector2.new(180, 180)
+	sparkle.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.5, 0.5), NumberSequenceKeypoint.new(1, 0) })
+	sparkle.Transparency = NumberSequence.new(0.55)
+	sparkle.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255))
+	sparkle.LightEmission = 1
+	sparkle.Parent = sparkAtt
+
+	-- plaque on the front with the count
+	part({ Name = "Plaque", Size = Vector3.new(7, 1.6, 0.2), Color = brass, Material = Enum.Material.Metal, CanCollide = false, Parent = aq, CFrame = cf * CFrame.new(0, 1.4, -(D + 1.6) / 2 - 0.1) })
 	local fishFolder = Instance.new("Folder")
 	fishFolder.Name = "FishDisplay"
 	fishFolder.Parent = aq
-	billboard(glass, "Aquarium 0/10", H / 2 + 2, 220, Color3.new(1, 1, 1), 120)
+	billboard(glass, "Aquarium 0/50", H / 2 + 3, 220, Color3.new(1, 1, 1), 120)
 	return aq
 end
 
