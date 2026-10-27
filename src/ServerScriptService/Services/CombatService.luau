@@ -9,6 +9,7 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.GameConfig)
 local Builders = require(ReplicatedStorage.Shared.Builders)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local DataService = require(script.Parent.DataService)
 local IslandService = require(script.Parent.IslandService)
 local EconomyService = require(script.Parent.EconomyService)
@@ -93,60 +94,101 @@ function CombatService.HostileTargets(island: Model, from: Vector3, range: numbe
 end
 
 -- Fires a physical cannonball. onHit(hitPart) decides what takes damage.
+-- Raycast-stepped projectile: never tunnels, always registers a hit.
 function CombatService.FireCannonball(origin: CFrame, direction: Vector3, speed: number, damage: number, source: Player?, hitFilter: { Instance })
 	local ball = Builders.BuildCannonball(origin)
+	ball.Anchored = true
 	ball.Parent = projectilesFolder
-	ball.AssemblyLinearVelocity = direction.Unit * speed + Vector3.new(0, speed * 0.15, 0)
-	Debris:AddItem(ball, 5)
-	-- muzzle flash
 	local flash = Instance.new("PointLight")
 	flash.Brightness = 6
 	flash.Range = 14
 	flash.Color = Color3.fromRGB(255, 200, 100)
 	flash.Parent = ball
 	Debris:AddItem(flash, 0.15)
-	local hitDone = false
-	ball.Touched:Connect(function(hit: BasePart)
-		if hitDone then return end
-		if hit:IsDescendantOf(projectilesFolder) then return end
-		for _, f in ipairs(hitFilter) do
-			if hit:IsDescendantOf(f) then return end
-		end
-		hitDone = true
-		local model = hit:FindFirstAncestorOfClass("Model")
-		if model then
-			local hum = model:FindFirstChildOfClass("Humanoid")
-			if hum then
-				hum:TakeDamage(damage)
-				if source and model:GetAttribute("IsPirate") then
-					model:SetAttribute("LastHitBy", source.UserId)
-				end
-			elseif model.Name == "Castle" then
-				local island = model.Parent :: Model
-				if source == nil then
-					CombatService.DamageCastle(island, damage, nil)
-				elseif IslandService.GetOwner(island) ~= source and source.Character and source.Character:GetAttribute("Raiding") == island.Name then
-					CombatService.DamageCastle(island, damage, source)
-				end
-			elseif model.Name:sub(1, 5) == "Ship_" then
-				local hp = (model:GetAttribute("HP") :: number) - damage
-				model:SetAttribute("HP", hp)
-				if hp <= 0 then
-					for _, p in ipairs(model:GetDescendants()) do
-						if p:IsA("BasePart") then p.Anchored = false; p:BreakJoints() end
-					end
-					Debris:AddItem(model, 6)
-				end
-			end
-		end
-		-- impact puff
+
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	local ignore = { projectilesFolder :: Instance }
+	for _, f in ipairs(hitFilter) do if f then table.insert(ignore, f) end end
+	params.FilterDescendantsInstances = ignore
+
+	local pos = origin.Position
+	local vel = direction.Unit * speed + Vector3.new(0, speed * 0.12, 0)
+	local gravity = Vector3.new(0, -60, 0)
+	local life = 0
+
+	local function impact(at: Vector3, hit: BasePart?)
 		local e = Instance.new("Explosion")
 		e.BlastPressure = 0
 		e.BlastRadius = 0
-		e.Position = ball.Position
-		e.Visible = true
+		e.Position = at
 		e.Parent = Workspace
+		if hit then
+			local model = hit:FindFirstAncestorOfClass("Model")
+			-- climb to the top-level model for ships/castles (parts may be nested in folders)
+			local top = model
+			while top and top.Parent and top.Parent:IsA("Model") do top = top.Parent :: Model end
+			if model then
+				local hum = model:FindFirstChildOfClass("Humanoid") or (top and top:FindFirstChildOfClass("Humanoid"))
+				local castle = hit:FindFirstAncestor("Castle")
+				local ship = nil
+				local anc = hit.Parent
+				while anc do
+					if anc:IsA("Model") and anc.Name:sub(1, 5) == "Ship_" then ship = anc break end
+					anc = anc.Parent
+				end
+				if hum then
+					hum:TakeDamage(damage)
+					local hm = hum.Parent :: Model
+					if source and hm:GetAttribute("IsPirate") then hm:SetAttribute("LastHitBy", source.UserId) end
+				elseif castle then
+					local island = castle.Parent :: Model
+					if source == nil then
+						CombatService.DamageCastle(island, damage, nil)
+					elseif IslandService.GetOwner(island) ~= source then
+						local raiding = source.Character and source.Character:GetAttribute("Raiding") == island.Name
+						if raiding then
+							CombatService.DamageCastle(island, damage, source)
+						else
+							Remotes.Notify:FireClient(source, "Castles can only be raided at night, within range of the walls.", Color3.fromRGB(255, 180, 90))
+						end
+					end
+				elseif ship then
+					if not (source and ship:GetAttribute("OwnerId") == source.UserId) then
+						local hp = (ship:GetAttribute("HP") :: number) - damage
+						ship:SetAttribute("HP", hp)
+						if hp <= 0 then
+							for _, p in ipairs(ship:GetDescendants()) do
+								if p:IsA("BasePart") then p.Anchored = false; p:BreakJoints() end
+							end
+							Debris:AddItem(ship, 6)
+						end
+					end
+				end
+			end
+		end
 		ball:Destroy()
+	end
+
+	task.spawn(function()
+		while ball.Parent and life < 6 do
+			local dt = task.wait()
+			life += dt
+			vel += gravity * dt
+			local step = vel * dt
+			local result = Workspace:Raycast(pos, step, params)
+			if result then
+				impact(result.Position, result.Instance)
+				return
+			end
+			pos += step
+			ball.CFrame = CFrame.new(pos, pos + vel)
+			if pos.Y < Config.World.SeaLevelY - 2 then
+				impact(pos, nil)
+				return
+			end
+		end
+		if ball.Parent then ball:Destroy() end
 	end)
 end
 
@@ -242,33 +284,58 @@ local function giveCutlass(player: Player, char: Model)
 	tool.Parent = player.Backpack
 end
 
--- Manned castle cannons: press E at a cannon to fire where you're facing
+-- Manned castle cannons: press E at a cannon to take control; aim with the camera; click / F / FIRE to shoot.
+local manning: { [Player]: BasePart } = {}
 local lastManual: { [Player]: number } = {}
+
+local function leaveCannon(player: Player)
+	if manning[player] then
+		manning[player] = nil
+		Remotes.ManCannon:FireClient(player, nil)
+	end
+end
+
 local function hookManualCannon(barrel: Instance)
 	if not barrel:IsA("BasePart") then return end
 	local prompt = barrel:FindFirstChildOfClass("ProximityPrompt")
 	if not prompt then return end
+	prompt.ActionText = "Man cannon"
 	prompt.Triggered:Connect(function(player: Player)
-		if os.clock() - (lastManual[player] or 0) < 0.8 then return end
-		local castle = barrel:FindFirstAncestor("Castle")
-		local island = castle and castle.Parent :: Model?
-		if not island then return end
-		local char = player.Character
-		local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
-		if not hrp then return end
-		lastManual[player] = os.clock()
-		local level = (castle :: Model):GetAttribute("Level") :: number
-		local dmg = Config.Stats.CastleDamage(level)
-		local look = hrp.CFrame.LookVector
-		local dir = Vector3.new(look.X, 0, look.Z).Unit + Vector3.new(0, 0.12, 0)
-		CombatService.FireCannonball(CFrame.new(barrel.Position + dir.Unit * 3), dir, 95, dmg, player, { castle :: Instance, char :: Instance })
-		-- recoil puff
-		local flash = Instance.new("Explosion")
-		flash.BlastPressure = 0
-		flash.BlastRadius = 0
-		flash.Position = barrel.Position + dir.Unit * 2.5
-		flash.Parent = Workspace
+		if manning[player] == barrel then
+			leaveCannon(player)
+			return
+		end
+		manning[player] = barrel
+		Remotes.ManCannon:FireClient(player, barrel)
+		Remotes.Notify:FireClient(player, "🎯 Aim with the camera • click, F or FIRE to shoot • E again to step away", Color3.fromRGB(120, 220, 255))
 	end)
+end
+
+function CombatService.FireManned(player: Player, aim: Vector3): boolean
+	local barrel = manning[player]
+	if not barrel or not barrel.Parent then return false end
+	local char = player.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not hrp or (hrp.Position - barrel.Position).Magnitude > 10 then
+		leaveCannon(player)
+		return false
+	end
+	if os.clock() - (lastManual[player] or 0) < 0.9 then return true end
+	lastManual[player] = os.clock()
+	local castle = barrel:FindFirstAncestor("Castle") :: Model
+	local level = castle:GetAttribute("Level") :: number
+	local dmg = Config.Stats.CastleDamage(level)
+	-- clamp pitch so you can't shoot straight down through the wall
+	local dir = aim.Unit
+	local flat = Vector3.new(dir.X, 0, dir.Z)
+	if flat.Magnitude < 0.2 then flat = barrel.CFrame.LookVector end
+	local pitch = math.clamp(dir.Y, -0.25, 0.6)
+	dir = (flat.Unit + Vector3.new(0, pitch, 0)).Unit
+	-- swing the barrel to face the shot
+	local rest = barrel:GetAttribute("RestCFrame") :: CFrame
+	barrel.CFrame = CFrame.lookAt(rest.Position, rest.Position + dir) * CFrame.Angles(0, 0, math.rad(-90)) * CFrame.Angles(0, math.rad(90), 0)
+	CombatService.FireCannonball(CFrame.new(barrel.Position + dir * 3), dir, 110, dmg, player, { castle :: Instance, char :: Instance })
+	return true
 end
 
 function CombatService.Start()
@@ -281,8 +348,10 @@ function CombatService.Start()
 	piratesFolder.Name = "Pirates"
 	piratesFolder.Parent = Workspace
 
+	Players.PlayerRemoving:Connect(function(p) manning[p] = nil; lastManual[p] = nil end)
 	Players.PlayerAdded:Connect(function(player)
 		player.CharacterAdded:Connect(function(char)
+			leaveCannon(player)
 			giveCutlass(player, char)
 		end)
 		if player.Character then giveCutlass(player, player.Character) end

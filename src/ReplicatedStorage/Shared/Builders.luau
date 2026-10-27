@@ -435,7 +435,7 @@ function Builders.BuildCastle(island: Model, level: number, extraCannons: number
 
 	local growth = math.min(level, 8)
 	local half = 13 + growth * 0.3         -- outer wall half-width
-	local wallH = 7 + growth * 0.5
+	local wallH = 10 + growth * 0.5
 	local wallT = 4                        -- thick enough to walk along
 	local ground = y + 3
 	local base = facing * CFrame.new(0, ground, 11) -- castle centre, behind the beach
@@ -445,7 +445,8 @@ function Builders.BuildCastle(island: Model, level: number, extraCannons: number
 	part({ Name = "Courtyard", Size = Vector3.new(half * 2, 0.4, half * 2), Color = C.StoneDark, Material = Enum.Material.Slate, Parent = castle, CFrame = base * CFrame.new(0, 0.2, 0) })
 
 	-- walls: front (sea side, -Z) has a gate gap
-	local gateW = 7
+	local gateW = 10
+	local gateH = 9.5
 	local function wall(size: Vector3, cf: CFrame)
 		local w = part({ Name = "Wall", Size = size, Color = C.Stone, Material = stoneMat, Parent = castle, CFrame = cf })
 		return w
@@ -458,15 +459,17 @@ function Builders.BuildCastle(island: Model, level: number, extraCannons: number
 	local sideLen = half - gateW / 2
 	wall(Vector3.new(sideLen, wallH, wallT), base * CFrame.new(-(gateW / 2 + sideLen / 2), wallH / 2, -half))
 	wall(Vector3.new(sideLen, wallH, wallT), base * CFrame.new((gateW / 2 + sideLen / 2), wallH / 2, -half))
-	wall(Vector3.new(gateW + 0.2, wallH - 6.5, wallT), base * CFrame.new(0, 6.5 + (wallH - 6.5) / 2, -half))
+	if wallH > gateH then
+		wall(Vector3.new(gateW + 0.2, wallH - gateH, wallT), base * CFrame.new(0, gateH + (wallH - gateH) / 2, -half))
+	end
 	-- arch corners (wedges) to round the gate
 	for _, sx in ipairs({ -1, 1 }) do
 		local w = wedge({ Name = "Arch", Size = Vector3.new(wallT, 1.6, 1.6), Color = C.Stone, Material = stoneMat, Parent = castle })
-		w.CFrame = base * CFrame.new(sx * (gateW / 2 - 0.8), 5.7, -half) * CFrame.Angles(0, sx * math.rad(90), 0) * CFrame.Angles(0, 0, math.rad(180))
+		w.CFrame = base * CFrame.new(sx * (gateW / 2 - 0.8), gateH - 0.8, -half) * CFrame.Angles(0, sx * math.rad(90), 0) * CFrame.Angles(0, 0, math.rad(180))
 	end
 	-- portcullis (raised, decorative) + gate torches
 	for i = -2, 2 do
-		part({ Name = "Bar", Size = Vector3.new(0.25, 2.2, 0.25), Color = C.Iron, Material = Enum.Material.Metal, CanCollide = false, Parent = castle, CFrame = base * CFrame.new(i * 1.3, 6.4, -half - 0.9) })
+		part({ Name = "Bar", Size = Vector3.new(0.25, 2.2, 0.25), Color = C.Iron, Material = Enum.Material.Metal, CanCollide = false, Parent = castle, CFrame = base * CFrame.new(i * 1.6, gateH - 0.2, -half - 0.9) })
 	end
 	for _, sx in ipairs({ -1, 1 }) do
 		local torch = part({ Name = "Torch", Size = Vector3.new(0.5, 0.5, 0.5), Color = Color3.fromRGB(255, 190, 90), Material = Enum.Material.Neon, CanCollide = false, Parent = castle, CFrame = base * CFrame.new(sx * (gateW / 2 + 1.2), 4.5, -half - 1.7) })
@@ -514,17 +517,18 @@ function Builders.BuildCastle(island: Model, level: number, extraCannons: number
 	end
 
 	-- keep: a small hollow hall in the back of the courtyard with an open doorway
-	local kW, kD, kH = 11, 9, 7
+	local kW, kD, kH = 12, 10, 9
 	local kcf = base * CFrame.new(0, 0, half - kD / 2 - wallT - 1)
 	local keep = part({ Name = "CastleRoot", Size = Vector3.new(kW, 0.3, kD), Color = C.StoneDark, Material = Enum.Material.Slate, Parent = castle, CFrame = kcf * CFrame.new(0, 0.35, 0) })
 	castle.PrimaryPart = keep
 	wall(Vector3.new(kW, kH, 1), kcf * CFrame.new(0, kH / 2, kD / 2))
 	wall(Vector3.new(1, kH, kD), kcf * CFrame.new(-kW / 2, kH / 2, 0))
 	wall(Vector3.new(1, kH, kD), kcf * CFrame.new(kW / 2, kH / 2, 0))
-	local doorW = 3.4
+	local doorW = 5
+	local doorH = 7.5
 	wall(Vector3.new((kW - doorW) / 2, kH, 1), kcf * CFrame.new(-(doorW / 2 + (kW - doorW) / 4), kH / 2, -kD / 2))
 	wall(Vector3.new((kW - doorW) / 2, kH, 1), kcf * CFrame.new((doorW / 2 + (kW - doorW) / 4), kH / 2, -kD / 2))
-	wall(Vector3.new(doorW + 0.2, kH - 4.8, 1), kcf * CFrame.new(0, 4.8 + (kH - 4.8) / 2, -kD / 2))
+	wall(Vector3.new(doorW + 0.2, kH - doorH, 1), kcf * CFrame.new(0, doorH + (kH - doorH) / 2, -kD / 2))
 	part({ Name = "KeepRoof", Size = Vector3.new(kW + 1, 0.8, kD + 1), Color = C.StoneDark, Material = stoneMat, Parent = castle, CFrame = kcf * CFrame.new(0, kH + 0.4, 0) })
 	-- inside: treasure chest + throne-ish bench, chandelier light
 	local chest = part({ Name = "Chest", Size = Vector3.new(2.2, 1.4, 1.4), Color = C.WoodDark, Material = Enum.Material.Wood, Parent = castle, CFrame = kcf * CFrame.new(0, 1.2, kD / 2 - 1.6) })
@@ -553,6 +557,7 @@ function Builders.BuildCastle(island: Model, level: number, extraCannons: number
 		barrel.CFrame = ccf * CFrame.new(0, 0.75, -0.8) * CFrame.Angles(math.rad(90) + math.rad(-6), 0, 0) * CFrame.Angles(0, 0, math.rad(-90))
 		barrel.CanCollide = false
 		barrel:SetAttribute("Muzzle", true)
+		barrel:SetAttribute("RestCFrame", barrel.CFrame)
 		local prompt = Instance.new("ProximityPrompt")
 		prompt.ActionText = "Fire!"
 		prompt.ObjectText = "Cannon"

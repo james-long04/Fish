@@ -12,7 +12,7 @@ local EVENTS = {
 	"Caught",         -- server -> client: result of a cast
 	"BuyUpgrade",     -- client -> server
 	"SpawnShip",      -- client -> server
-	"FireCannons",    -- client -> server
+	"FireCannons",    -- client -> server: (aimDirection: Vector3) ship broadside / manned castle cannon
 	"Notify",         -- server -> client: toast message
 	"NightState",     -- server -> client: true = night
 	"RaidResult",     -- server -> client
@@ -27,6 +27,7 @@ local EVENTS = {
 	"TradeCancel",    -- client -> server
 	"TradeState",     -- server -> client: (state table or nil)
 	"Crew",           -- client -> server: ("HireFisher" | "HireGuard" | "UpgradeRods" | "UpgradeWeapons")
+	"ManCannon",      -- server -> client: (barrel or nil) you are now manning / left a castle cannon
 }
 
 local folder = ReplicatedStorage:FindFirstChild("Remotes")

@@ -44,8 +44,6 @@ local function spawnShip(player: Player)
 	ships[player] = ship
 
 	local seat = ship:FindFirstChild("DriverSeat") :: VehicleSeat
-	local drive = hull:FindFirstChild("Drive") :: LinearVelocity
-	local steer = hull:FindFirstChild("Steer") :: AngularVelocity
 	local prompt = seat:FindFirstChildOfClass("ProximityPrompt")
 	if prompt then
 		prompt.Triggered:Connect(function(who: Player)
@@ -59,39 +57,48 @@ local function spawnShip(player: Player)
 			local driver = Players:GetPlayerFromCharacter(occ.Parent)
 			if driver then
 				pcall(function() hull:SetNetworkOwner(driver) end)
-				drive.MaxForce = hull.AssemblyMass * 80
-				steer.MaxTorque = hull.AssemblyMass * 500
 				EconomyService.Notify(driver, "⛵ W/S sail • A/D steer • F or FIRE for cannons • jump to leave", Color3.fromRGB(120, 220, 255))
 			end
 		else
-			drive.PlaneVelocity = Vector2.zero
-			steer.AngularVelocity = Vector3.zero
-			drive.MaxForce = 0
-			steer.MaxTorque = 0
+			hull.AssemblyLinearVelocity = Vector3.new(0, hull.AssemblyLinearVelocity.Y, 0)
+			hull.AssemblyAngularVelocity = Vector3.zero
 			pcall(function() hull:SetNetworkOwnershipAuto() end)
 		end
 	end)
 	EconomyService.Notify(player, string.format("Your %s is moored beside the dock. Walk aboard and press E at the helm.", Config.Stats.ShipTier(level)), Color3.fromRGB(120, 220, 255))
 end
 
-local function fireCannons(player: Player)
+local function fireCannons(player: Player, aim: any)
+	local aimDir: Vector3? = (typeof(aim) == "Vector3" and aim.Magnitude > 0.1) and aim.Unit or nil
+	-- manning a castle cannon? that takes priority
+	if CombatService.FireManned(player, aimDir or Vector3.new(0, 0, -1)) then return end
 	local ship = ShipService.GetShip(player)
 	local profile = DataService.Get(player)
 	if not ship or not profile then return end
 	local seat = ship:FindFirstChild("DriverSeat") :: VehicleSeat
 	if not seat.Occupant or Players:GetPlayerFromCharacter(seat.Occupant.Parent) ~= player then return end
-	if os.clock() - (lastFire[player] or 0) < 1.5 then return end
+	if os.clock() - (lastFire[player] or 0) < 1.2 then return end
 	lastFire[player] = os.clock()
 	local cannons = ship:FindFirstChild("Cannons")
 	if not cannons or #cannons:GetChildren() == 0 then return end
 	local level = profile.Upgrades.Ship
-	local dmg = math.floor(12 * (1.25 ^ level))
+	local dmg = math.floor(14 * (1.25 ^ level))
 	local hull = ship.PrimaryPart :: BasePart
+	-- pick the side facing where you're looking; fire that side along your aim
+	local side = 1
+	local dir = hull.CFrame.RightVector
+	if aimDir then
+		local flat = Vector3.new(aimDir.X, 0, aimDir.Z)
+		if flat.Magnitude > 0.1 then
+			side = (flat.Unit:Dot(hull.CFrame.RightVector) >= 0) and 1 or -1
+			dir = (flat.Unit + Vector3.new(0, math.clamp(aimDir.Y, -0.1, 0.5), 0)).Unit
+		end
+	end
 	for _, c in ipairs(cannons:GetChildren()) do
-		if c:IsA("BasePart") then
-			local side = c:GetAttribute("Side") :: number
-			local dir = hull.CFrame.RightVector * side
-			CombatService.FireCannonball(CFrame.new(c.Position + dir * 2), dir, 90, dmg, player, { ship, player.Character :: Instance })
+		if c:IsA("BasePart") and c:GetAttribute("Side") == side then
+			local spread = CFrame.Angles(0, (math.random() - 0.5) * 0.08, 0)
+			local d = (spread * CFrame.new(Vector3.zero, dir)).LookVector
+			CombatService.FireCannonball(CFrame.new(c.Position + d * 2.5), d, 110, dmg, player, { ship, player.Character :: Instance })
 		end
 	end
 end
