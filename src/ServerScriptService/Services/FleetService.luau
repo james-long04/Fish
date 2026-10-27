@@ -42,6 +42,7 @@ type Boat = {
 	level: number,
 	deadAt: number?,
 	nextCatch: number,
+	goalSetAt: number?,
 }
 
 local boats: { [Player]: { Boat } } = {}
@@ -84,8 +85,8 @@ local function steerDir(from: Vector3, goal: Vector3, ignore: Model?): Vector3
 			local off = Vector3.new(from.X - c.X, 0, from.Z - c.Z)
 			local safe = Config.World.IslandRadius * 1.75
 			local d = off.Magnitude
-			if d < safe + 60 and dir:Dot(-off.Unit) > 0 then
-				dir = (dir + off.Unit * ((safe + 60 - d) / 60) * 1.5).Unit
+			if d < safe + 40 and dir:Dot(-off.Unit) > 0.2 then
+				dir = (dir + off.Unit * ((safe + 40 - d) / 40) * 0.8).Unit
 			end
 		end
 	end
@@ -145,7 +146,7 @@ local function spawnBoat(owner: Player, index: number, home: Model, level: numbe
 	ship.Name = "Ship_AI_" .. owner.UserId .. "_" .. index
 	ship:SetAttribute("OwnerId", owner.UserId)
 	ship:SetAttribute("AI", true)
-	ship:SetAttribute("Speed", Config.Stats.ShipSpeed(level) * Monetization.SpeedMult(owner) * 0.8)
+	ship:SetAttribute("Speed", math.min(26, Config.Stats.ShipSpeed(level) * 0.7))
 	for _, d in ipairs(ship:GetDescendants()) do
 		if d:IsA("BasePart") then d.Anchored = true end
 		if d:IsA("ProximityPrompt") or d:IsA("LinearVelocity") or d:IsA("AngularVelocity") or d:IsA("AlignOrientation") then d:Destroy() end
@@ -280,7 +281,7 @@ local function think(b: Boat, now: number)
 			-- circle the island at standoff range, broadside the keep
 			local c = islandCentre(isl :: Model)
 			local ring = Config.World.IslandRadius * 1.9 + 10
-			local ang = math.atan2(b.pos.Z - c.Z, b.pos.X - c.X) + 0.35
+			local ang = math.atan2(b.pos.Z - c.Z, b.pos.X - c.X) + 0.18
 			b.goal = Vector3.new(c.X + math.cos(ang) * ring, SEA_Y, c.Z + math.sin(ang) * ring)
 			if ((keep :: BasePart).Position - b.pos).Magnitude < Config.World.IslandRadius * 2.6 then
 				fireAt(b, (keep :: BasePart).Position + Vector3.new(0, 4, 0), (isl :: Model).Name)
@@ -289,7 +290,7 @@ local function think(b: Boat, now: number)
 			-- patrol home at night: orbit, shoot pirates on the beach
 			local c = islandCentre(b.homeIsland)
 			local ring = Config.World.IslandRadius * 1.6
-			local ang = math.atan2(b.pos.Z - c.Z, b.pos.X - c.X) + 0.3
+			local ang = math.atan2(b.pos.Z - c.Z, b.pos.X - c.X) + 0.18
 			b.goal = Vector3.new(c.X + math.cos(ang) * ring, SEA_Y, c.Z + math.sin(ang) * ring)
 			local targets = CombatService.HostileTargets(b.homeIsland, b.pos, 140)
 			if #targets > 0 then fireAt(b, targets[1].Position + Vector3.new(0, 2, 0), nil) end
@@ -301,8 +302,10 @@ local function think(b: Boat, now: number)
 	if b.ship:GetAttribute("AIRaidTarget") then b.ship:SetAttribute("AIRaidTarget", nil) end
 	if b.state == "raiding" or b.state == "patrol" then b.state = "sailing"; b.goal = nil end
 	if b.state == "sailing" then
-		if not b.goal then b.goal = randomFishingGround(b.homeIsland) end
-		if (Vector3.new(b.goal.X - b.pos.X, 0, b.goal.Z - b.pos.Z)).Magnitude < 12 then
+		if not b.goal then b.goal = randomFishingGround(b.homeIsland); b.goalSetAt = now end
+		local dGoal = (Vector3.new(b.goal.X - b.pos.X, 0, b.goal.Z - b.pos.Z)).Magnitude
+		if now - (b.goalSetAt or now) > 90 then b.goal = randomFishingGround(b.homeIsland); b.goalSetAt = now end
+		if dGoal < 20 then
 			b.state = "fishing"
 			b.stateUntil = now + 40 + math.random() * 40
 			b.goal = nil
@@ -323,7 +326,7 @@ local function think(b: Boat, now: number)
 end
 
 local function move(b: Boat, dt: number)
-	local turnRate = 0.9
+	local turnRate = 0.55
 	local targetSpeed = 0
 	if b.goal then
 		local dir = steerDir(b.pos, b.goal, b.raidIsland)
@@ -331,10 +334,11 @@ local function move(b: Boat, dt: number)
 		local diff = (wantYaw - b.yaw + math.pi) % (2 * math.pi) - math.pi
 		b.yaw += math.clamp(diff, -turnRate * dt, turnRate * dt)
 		local dist = Vector3.new(b.goal.X - b.pos.X, 0, b.goal.Z - b.pos.Z).Magnitude
-		targetSpeed = (dist < 25) and b.maxSpeed * 0.4 or b.maxSpeed
-		if math.abs(diff) > 1.2 then targetSpeed *= 0.5 end
+		-- ease in over the last 60 studs so we don't overshoot and loop
+		targetSpeed = b.maxSpeed * math.clamp(dist / 60, 0.25, 1)
+		if math.abs(diff) > 0.8 then targetSpeed *= 0.45 end
 	end
-	b.speed += (targetSpeed - b.speed) * math.min(1, dt * 0.8)
+	b.speed += (targetSpeed - b.speed) * math.min(1, dt * 1.2)
 	local forward = Vector3.new(-math.sin(b.yaw), 0, -math.cos(b.yaw))
 	b.pos += forward * b.speed * dt
 	local bob = math.sin(os.clock() * 1.3 + b.index) * 0.25

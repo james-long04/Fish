@@ -98,7 +98,7 @@ function Config.Stats.CastleDamage(level: number): number
 	return math.floor(10 * (1.25 ^ level))
 end
 function Config.Stats.ShipSpeed(level: number): number
-	return 24 + level * 3
+	return math.min(38, 16 + level * 1.4)
 end
 function Config.Stats.ShipHP(level: number): number
 	return math.floor(100 * (1.3 ^ level))
