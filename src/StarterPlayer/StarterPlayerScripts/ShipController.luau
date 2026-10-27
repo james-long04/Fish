@@ -54,7 +54,7 @@ end
 local gui = player:WaitForChild("PlayerGui"):WaitForChild("TycoonHUD") :: ScreenGui
 local hint = Instance.new("TextLabel")
 hint.Size = UDim2.fromOffset(420, 22)
-hint.Position = UDim2.new(0.5, -210, 1, -34)
+hint.Position = UDim2.new(0.5, -210, 1, -96)
 hint.BackgroundColor3 = Color3.fromRGB(30, 50, 80)
 hint.BackgroundTransparency = 0.3
 hint.Font = Enum.Font.FredokaOne

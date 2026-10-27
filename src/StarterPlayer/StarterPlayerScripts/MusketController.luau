@@ -46,12 +46,19 @@ function MusketController.Start()
 	Remotes.Stats.OnClientEvent:Connect(function(s)
 		if s.Upgrades and s.Upgrades.Musket then musketLevel = s.Upgrades.Musket end
 	end)
-	UserInputService.InputBegan:Connect(function(input, gp)
-		if gp then return end
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			shoot()
-		end
-	end)
+	-- Tool.Activated fires on click/tap while the Musket is equipped (works on every platform)
+	local function hookChar(char: Model)
+		char.ChildAdded:Connect(function(c)
+			if c:IsA("Tool") and c.Name == "Musket" then
+				c.Activated:Connect(shoot)
+			end
+		end)
+		local existing = char:FindFirstChild("Musket")
+		if existing and existing:IsA("Tool") then existing.Activated:Connect(shoot) end
+	end
+	player.CharacterAdded:Connect(hookChar)
+	if player.Character then hookChar(player.Character) end
+	-- backpack copies get hooked when equipped (ChildAdded above), nothing else needed
 end
 
 return MusketController

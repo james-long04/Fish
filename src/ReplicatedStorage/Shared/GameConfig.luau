@@ -117,10 +117,10 @@ end
 -- First-session hook: most new players land a Rare/Epic in their first two minutes.
 -- Faster bites while the window is open, then an escalating chance per catch to force a higher tier.
 Config.NewPlayer = {
-	WindowSeconds = 120,            -- measured from first join
+	WindowSeconds = 150,            -- measured from the player's FIRST CAST, not from joining
 	BiteTimeMult = 0.45,            -- bites come ~2× faster during the window
-	ForceChanceByCatch = { 0, 0.5, 0.8, 1.0 }, -- catch #1 never, #2 50%, #3 80%, #4+ guaranteed
-	ForceTiers = { { tier = 3, weight = 70 }, { tier = 4, weight = 30 } }, -- Rare 70% / Epic 30%
+	ForceChanceByCatch = { 0.35, 0.75, 1.0 }, -- catch #1 35%, #2 75%, #3+ guaranteed
+	ForceTiers = { { tier = 4, weight = 45 }, { tier = 5, weight = 40 }, { tier = 6, weight = 15 } }, -- Epic 45% / Legendary 40% / Mythic 15%
 }
 
 function Config.RollFishOfTier(tier: number)
@@ -174,7 +174,7 @@ Config.Pirates = {
 	CannonRange = 110,
 	CannonInterval = 2,
 	SwordDamage = function(rodLevel: number): number return 25 + rodLevel * 2 end,
-	SwordRange = 9,
+	SwordRange = 12,
 }
 
 Config.Raid = {

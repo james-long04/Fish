@@ -30,6 +30,7 @@ export type Profile = {
 	StarterBought: boolean,
 	RobuxSpent: number,
 	LuckyStartGiven: boolean,
+	FirstCastAt: number,
 	Villagers: { Fishers: number, Guards: number, FisherRod: number, GuardWeapon: number },
 }
 
@@ -55,6 +56,7 @@ local function defaultProfile(): Profile
 		StarterBought = false,
 		RobuxSpent = 0,
 		LuckyStartGiven = false,
+		FirstCastAt = 0,
 		Villagers = { Fishers = 0, Guards = 0, FisherRod = 0, GuardWeapon = 0 },
 	}
 end

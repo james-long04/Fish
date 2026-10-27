@@ -15,6 +15,36 @@ local IslandService = require(script.Parent.IslandService)
 local EconomyService = require(script.Parent.EconomyService)
 
 local CombatService = {}
+
+-- Floating damage number at a world position (everyone sees it)
+function CombatService.DamagePopup(pos: Vector3, amount: number, color: Color3?)
+	local holder = Instance.new("Part")
+	holder.Anchored = true
+	holder.CanCollide = false
+	holder.CanQuery = false
+	holder.Transparency = 1
+	holder.Size = Vector3.new(0.2, 0.2, 0.2)
+	holder.CFrame = CFrame.new(pos + Vector3.new((math.random() - 0.5) * 2, 1.5, (math.random() - 0.5) * 2))
+	holder.Parent = Workspace
+	local bb = Instance.new("BillboardGui")
+	bb.Size = UDim2.fromOffset(80, 30)
+	bb.AlwaysOnTop = true
+	bb.MaxDistance = 160
+	bb.Parent = holder
+	local t = Instance.new("TextLabel")
+	t.Size = UDim2.fromScale(1, 1)
+	t.BackgroundTransparency = 1
+	t.Font = Enum.Font.FredokaOne
+	t.TextScaled = true
+	t.TextColor3 = color or Color3.fromRGB(255, 90, 90)
+	t.TextStrokeTransparency = 0.2
+	t.Text = "-" .. tostring(math.floor(amount))
+	t.Parent = bb
+	local TweenService = game:GetService("TweenService")
+	TweenService:Create(bb, TweenInfo.new(0.9, Enum.EasingStyle.Quad), { StudsOffset = Vector3.new(0, 3, 0) }):Play()
+	TweenService:Create(t, TweenInfo.new(0.9), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+	Debris:AddItem(holder, 1)
+end
 CombatService.CastleDestroyed = Instance.new("BindableEvent") -- (island: Model, attacker: Player?)
 
 local projectilesFolder: Folder
@@ -149,6 +179,7 @@ function CombatService.FireCannonball(origin: CFrame, direction: Vector3, speed:
 				end
 				if hum then
 					hum:TakeDamage(damage)
+					CombatService.DamagePopup(at, damage)
 					local hm = hum.Parent :: Model
 					if source and hm:GetAttribute("IsPirate") then hm:SetAttribute("LastHitBy", source.UserId) end
 				elseif castle then
@@ -309,7 +340,9 @@ local function musketShot(player: Player, origin: any, direction: any)
 			local isMine = model:GetAttribute("IsVillager") and IslandService.GetIsland(player) and model:GetAttribute("Island") == (IslandService.GetIsland(player) :: Model).Name
 			if not isMine then
 				local headshot = hit.Name == "Head"
-				hum:TakeDamage(headshot and dmg * 1.5 or dmg)
+				local dealt = headshot and dmg * 1.5 or dmg
+				hum:TakeDamage(dealt)
+				CombatService.DamagePopup(hitPos, dealt, headshot and Color3.fromRGB(255, 220, 60) or nil)
 				if model:GetAttribute("IsPirate") then model:SetAttribute("LastHitBy", player.UserId) end
 			end
 		else
@@ -358,9 +391,23 @@ local function giveCutlass(player: Player, char: Model)
 	local w = Instance.new("WeldConstraint", grip); w.Part0 = handle; w.Part1 = grip
 	tool.Grip = CFrame.new(0, -1.3, 0) * CFrame.Angles(0, 0, 0)
 	local lastSwing = 0
+	local slashTrack: AnimationTrack? = nil
+	local function playSlash()
+		local hum = char:FindFirstChildOfClass("Humanoid")
+		if not hum then return end
+		if not slashTrack then
+			local animator = hum:FindFirstChildOfClass("Animator") or Instance.new("Animator", hum)
+			local anim = Instance.new("Animation")
+			anim.AnimationId = (hum.RigType == Enum.HumanoidRigType.R15) and "rbxassetid://522635514" or "rbxassetid://94161088"
+			local ok, track = pcall(animator.LoadAnimation, animator, anim)
+			if ok then slashTrack = track; (track :: AnimationTrack).Priority = Enum.AnimationPriority.Action end
+		end
+		if slashTrack then slashTrack:Play(0.05, 1, 1.3) end
+	end
 	tool.Activated:Connect(function()
-		if os.clock() - lastSwing < 0.5 then return end
+		if os.clock() - lastSwing < 0.45 then return end
 		lastSwing = os.clock()
+		playSlash()
 		local profile = DataService.Get(player)
 		local hrp = char:FindFirstChild("HumanoidRootPart") :: BasePart?
 		if not profile or not hrp then return end
@@ -372,8 +419,9 @@ local function giveCutlass(player: Player, char: Model)
 			local hum = pirate:FindFirstChildOfClass("Humanoid")
 			if phrp and hum and hum.Health > 0 then
 				local offset = phrp.Position - hrp.Position
-				if offset.Magnitude <= range and hrp.CFrame.LookVector:Dot(offset.Unit) > 0.3 then
+				if offset.Magnitude <= range and hrp.CFrame.LookVector:Dot(offset.Unit) > 0.1 then
 					hum:TakeDamage(dmg)
+					CombatService.DamagePopup(phrp.Position, dmg)
 					pirate:SetAttribute("LastHitBy", player.UserId)
 				end
 			end

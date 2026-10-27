@@ -20,7 +20,7 @@ local function finishCatch(player: Player)
 	if not profile then return end
 	local fish
 	local lucky = false
-	local inWindow = (os.time() - profile.FirstJoin) < Config.NewPlayer.WindowSeconds
+	local inWindow = profile.FirstCastAt > 0 and (os.time() - profile.FirstCastAt) < Config.NewPlayer.WindowSeconds
 	if inWindow and not profile.LuckyStartGiven then
 		local catchNo = profile.TotalCaught + 1
 		local chances = Config.NewPlayer.ForceChanceByCatch
@@ -42,12 +42,12 @@ local function finishCatch(player: Player)
 	if not fish then
 		fish = Config.RollFish(Config.Stats.RodLuck(profile.Upgrades.Rod) + Monetization.LuckBonus(player))
 		-- a natural Rare+ in the window also counts, so we don't stack a forced one on top
-		if inWindow and not profile.LuckyStartGiven and fish.tier >= 3 then profile.LuckyStartGiven = true end
+		if inWindow and not profile.LuckyStartGiven and fish.tier >= 4 then profile.LuckyStartGiven = true end
 	end
 	if lucky then
 		profile.LuckyStartGiven = true
 		task.delay(1.2, function()
-			EconomyService.Notify(player, string.format("🍀 Beginner's luck! A %s %s earns %s coins/sec — that's %dx a Sardine. Upgrade your Rod for more like it.", fish.rarity, fish.name, tostring(fish.income), math.floor(fish.income / 0.5)), Color3.fromRGB(255, 220, 90))
+			EconomyService.Notify(player, string.format("🍀 Beginner's luck! %s %s — %s coins/sec, %dx a Sardine. Upgrade your Rod for more like it.", fish.rarity, fish.name, tostring(fish.income), math.floor(fish.income / 0.5)), Color3.fromRGB(255, 220, 90))
 		end)
 	end
 	profile.TotalCaught += 1
@@ -77,7 +77,8 @@ local function startCast(player: Player)
 	s.casting = true
 	s.biteAt = nil
 	local minT, maxT = Config.Stats.BiteTime(profile.Upgrades.Rod)
-	if (os.time() - profile.FirstJoin) < Config.NewPlayer.WindowSeconds then
+	if profile.FirstCastAt == 0 then profile.FirstCastAt = os.time() end
+	if (os.time() - profile.FirstCastAt) < Config.NewPlayer.WindowSeconds then
 		minT *= Config.NewPlayer.BiteTimeMult
 		maxT *= Config.NewPlayer.BiteTimeMult
 	end
