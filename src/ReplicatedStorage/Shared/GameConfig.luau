@@ -8,7 +8,7 @@ Config.Economy = {
 	StartingCoins = 50,
 	SaveIntervalSeconds = 60,
 	OfflineEarningsCapHours = 8,
-	StatsBroadcastSeconds = 1,
+	StatsBroadcastSeconds = 2,
 	RaidStealFraction = 0.10, -- player raid steals 10% of the victim's coins
 	PirateLossFraction = 0.20, -- losing to pirates costs 20% of coins
 }

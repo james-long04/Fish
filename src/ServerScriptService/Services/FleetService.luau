@@ -133,9 +133,10 @@ end
 -- spawning
 ----------------------------------------------------------------------
 local function placeBoat(b: Boat, cf: CFrame)
-	b.ship:PivotTo(cf)
+	b.hull.CFrame = cf
 	for _, c in ipairs(b.crew) do
-		if c.rig.Parent then c.rig:PivotTo(cf * c.offset) end
+		local hrp = c.rig.PrimaryPart
+		if hrp and c.rig.Parent then hrp.CFrame = cf * c.offset end
 	end
 end
 
@@ -148,10 +149,12 @@ local function spawnBoat(owner: Player, index: number, home: Model, level: numbe
 	ship:SetAttribute("AI", true)
 	ship:SetAttribute("Speed", math.min(26, Config.Stats.ShipSpeed(level) * 0.7))
 	for _, d in ipairs(ship:GetDescendants()) do
-		if d:IsA("BasePart") then d.Anchored = true end
 		if d:IsA("ProximityPrompt") or d:IsA("LinearVelocity") or d:IsA("AngularVelocity") or d:IsA("AlignOrientation") then d:Destroy() end
+		if d:IsA("BasePart") then d.Anchored = false; d.CanCollide = false; d.Massless = true end
 	end
 	local hull = ship.PrimaryPart :: BasePart
+	hull.Anchored = true
+	hull.CanCollide = true
 	-- start a little way off the dock, spread so boats don't overlap
 	local dockEnd = home:FindFirstChild("DockEnd") :: BasePart
 	local startCF = dockEnd.CFrame * CFrame.new(-18 - (index - 1) * 16, SEA_Y - dockEnd.Position.Y + 0.4, -20)
@@ -358,8 +361,13 @@ function FleetService.Start()
 		shipsFolder.Parent = Workspace
 	end
 	local acc = 0
+	local moveAcc = 0
 	RunService.Heartbeat:Connect(function(dt)
 		acc += dt
+		moveAcc += dt
+		if moveAcc < 1 / 20 then return end
+		local stepDt = moveAcc
+		moveAcc = 0
 		local doThink = acc >= 0.5
 		if doThink then acc = 0 end
 		local now = os.clock()
@@ -381,7 +389,7 @@ function FleetService.Start()
 					continue
 				end
 				if doThink then think(b, now) end
-				move(b, dt)
+				move(b, stepDt)
 			end
 		end
 	end)

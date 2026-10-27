@@ -121,11 +121,11 @@ function Builders.BuildWorld()
 	terrain.WaterReflectance = 0.6
 	terrain.WaterWaveSize = 0.18
 	terrain.WaterWaveSpeed = 14
-	pcall(function() (terrain :: any).Decoration = true end) -- animated grass; not scriptable on every Studio build
+	pcall(function() (terrain :: any).Decoration = false end) -- animated grass is expensive; leave off
 	local size = Config.World.WaterSize
 	local y = Config.World.SeaLevelY
-	terrain:FillBlock(CFrame.new(0, y - 30, 0), Vector3.new(size, 8, size), Enum.Material.Sand) -- seabed
-	terrain:FillBlock(CFrame.new(0, y - 13, 0), Vector3.new(size, 26, size), Enum.Material.Water)
+	terrain:FillBlock(CFrame.new(0, y - 22, 0), Vector3.new(size, 8, size), Enum.Material.Sand) -- seabed
+	terrain:FillBlock(CFrame.new(0, y - 9, 0), Vector3.new(size, 18, size), Enum.Material.Water)
 	-- invisible floor + a ring wall so ships can't reach the edge of the water
 	part({ Name = "SeaFloor", Size = Vector3.new(size, 4, size), CFrame = CFrame.new(0, y - 36, 0), Transparency = 1, Parent = Workspace })
 	local border = Instance.new("Model")
@@ -210,7 +210,7 @@ function Builders.BuildTerrainIsland(center: Vector3, R: number)
 	}
 	for _, L in ipairs(layers) do
 		local r, top = R * L[1], y + L[2]
-		local h = top + 24
+		local h = top + 20
 		terrain:FillCylinder(CFrame.new(center.X, top - h / 2, center.Z), h, r, Enum.Material.Sand)
 	end
 	-- grassy centre
@@ -226,8 +226,8 @@ function Builders.BuildPalm(baseCF: CFrame, parent: Instance)
 	m.Parent = parent
 	local yaw = math.random() * math.pi * 2
 	local lean = math.rad(8 + math.random() * 10)
-	local segs = 6
-	local segLen = 2.6 + math.random() * 0.6
+	local segs = 4
+	local segLen = 3.9 + math.random() * 0.6
 	local cf = baseCF * CFrame.Angles(0, yaw, 0)
 	local top = cf
 	for i = 1, segs do
@@ -240,19 +240,19 @@ function Builders.BuildPalm(baseCF: CFrame, parent: Instance)
 		cf = cf * CFrame.new(0, segLen, 0)
 		top = cf
 	end
-	for i = 1, 8 do
-		local ang = (i / 8) * math.pi * 2 + math.random() * 0.3
+	for i = 1, 6 do
+		local ang = (i / 6) * math.pi * 2 + math.random() * 0.3
 		local droop = math.rad(-15)
 		local fcf = top * CFrame.Angles(0, ang, 0)
 		local len = 5 + math.random() * 1.5
-		for k = 1, 3 do
-			local seg = part({ Name = "Leaf", Size = Vector3.new(1.9 - k * 0.4, 0.18, len / 3 + 0.3), Color = (k == 1) and C.Leaf or C.LeafDark, Material = Enum.Material.Grass, CanCollide = false, Parent = m })
-			fcf = fcf * CFrame.Angles(droop - math.rad(10) * k, 0, 0) * CFrame.new(0, 0, -(len / 6))
+		for k = 1, 2 do
+			local seg = part({ Name = "Leaf", Size = Vector3.new(2.1 - k * 0.5, 0.18, len / 2 + 0.3), Color = (k == 1) and C.Leaf or C.LeafDark, Material = Enum.Material.Grass, CanCollide = false, Parent = m })
+			fcf = fcf * CFrame.Angles(droop - math.rad(14) * k, 0, 0) * CFrame.new(0, 0, -(len / 4))
 			seg.CFrame = fcf
-			fcf = fcf * CFrame.new(0, 0, -(len / 6))
+			fcf = fcf * CFrame.new(0, 0, -(len / 4))
 		end
 	end
-	for _ = 1, 3 do
+	for _ = 1, 2 do
 		part({ Name = "Coconut", Shape = Enum.PartType.Ball, Size = Vector3.new(0.9, 0.9, 0.9), Color = C.WoodDark, Material = Enum.Material.Wood, CanCollide = false, Parent = m, CFrame = top * CFrame.new(math.random(-8, 8) / 10, -0.5, math.random(-8, 8) / 10) })
 	end
 	return m
@@ -307,7 +307,6 @@ function Builders.BuildHut(cf: CFrame, parent: Instance)
 	part({ Name = "WallFront", Size = Vector3.new(2.5, 6, 0.5), Color = C.Wood, Material = Enum.Material.WoodPlanks, Parent = m, CFrame = cf * CFrame.new(3.25, 3.3, -3.75) })
 	part({ Name = "Lintel", Size = Vector3.new(4.2, 1, 0.5), Color = C.Wood, Material = Enum.Material.WoodPlanks, Parent = m, CFrame = cf * CFrame.new(0, 5.8, -3.75) })
 	local win = part({ Name = "Window", Size = Vector3.new(0.3, 1.6, 2), Color = Color3.fromRGB(255, 225, 170), Material = Enum.Material.Glass, CanCollide = false, Parent = m, CFrame = cf * CFrame.new(4.3, 3.6, 1) })
-	pointLight(win, Color3.fromRGB(255, 210, 120), 10, 0.7)
 	for _, sx in ipairs({ -1, 1 }) do
 		local r = wedge({ Name = "Roof", Size = Vector3.new(10.5, 2.6, 4.8), Color = Color3.fromRGB(196, 160, 90), Material = Enum.Material.Fabric, Parent = m })
 		r.CFrame = cf * CFrame.new(0, 7.4, sx * 2.4) * CFrame.Angles(0, sx == 1 and 0 or math.rad(180), 0)
@@ -337,8 +336,8 @@ function Builders.BuildIsland(index: number, center: Vector3, parent: Instance):
 
 	Builders.BuildTerrainIsland(center, R)
 
-	for i = 1, 16 do
-		local ang = (i / 16) * math.pi * 2 + 0.3
+	for i = 1, 11 do
+		local ang = (i / 11) * math.pi * 2 + 0.3
 		local r = R * (0.62 + (i % 2) * 0.2)
 		Builders.BuildPalm(CFrame.new(center + Vector3.new(math.cos(ang) * r, y + 2.6, math.sin(ang) * r)), island)
 	end
@@ -694,7 +693,6 @@ function Builders.BuildCastle(island: Model, level: number, extraCannons: number
 				for _, face in ipairs({ Vector3.new(cx, 0, 0), Vector3.new(0, 0, cz) }) do
 					local wpos = tcf * CFrame.new(face * (td / 2 - 0.1) + Vector3.new(0, 4 + k * 4, 0))
 					local win = part({ Name = "Window", Size = Vector3.new(face.X ~= 0 and 0.4 or 1.4, 2.4, face.Z ~= 0 and 0.4 or 1.4), Color = Color3.fromRGB(255, 225, 170), Material = Enum.Material.Glass, CanCollide = false, Parent = castle, CFrame = wpos })
-					if k == 2 then pointLight(win, Color3.fromRGB(255, 210, 120), 10, 0.35) end
 				end
 			end
 		end
@@ -743,7 +741,6 @@ function Builders.BuildCastle(island: Model, level: number, extraCannons: number
 	for _, sx in ipairs({ -1, 1 }) do
 		for k = -1, 1 do
 			local w = part({ Name = "Window", Size = Vector3.new(0.4, 3, 1.6), Color = Color3.fromRGB(255, 225, 170), Material = Enum.Material.Glass, CanCollide = false, Parent = castle, CFrame = kcf * CFrame.new(sx * (kW / 2), floorH + 4.5, k * 5) })
-			if k == 0 then pointLight(w, Color3.fromRGB(255, 210, 120), 10, 0.35) end
 		end
 	end
 	-- roof: pitched, red, with a ridge and the flag

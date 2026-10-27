@@ -200,7 +200,7 @@ local function runGuard(player: Player, rig: Model, island: Model, waypoints: { 
 			wpIdx = (wpIdx % #waypoints) + 1
 			walkTo(hum, hrp, goal, 20)
 			if not rig.Parent then break end
-			local pauseT = 1.5 + math.random() * 3
+			local pauseT = 4 + math.random() * 5
 			local t0 = os.clock()
 			while os.clock() - t0 < pauseT do
 				task.wait(0.6)

@@ -12,7 +12,7 @@ local FishModels = require(ReplicatedStorage.Shared.FishModels)
 
 local Renderer = {}
 local MAX_PER_TANK = 28
-local RENDER_DISTANCE = 160
+local RENDER_DISTANCE = 110
 
 type Swimmer = {
 	model: Model,
@@ -216,7 +216,9 @@ function Renderer.Start()
 	local acc = 0
 	RunService.RenderStepped:Connect(function(dt)
 		acc += dt
-		step(os.clock(), dt)
+		if acc < 1 / 30 then return end
+		step(os.clock(), acc)
+		acc = 0
 	end)
 end
 
