@@ -1,0 +1,16 @@
+{
+  "name": "FishingTycoon",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "Shared": { "$path": "src/ReplicatedStorage/Shared" }
+    },
+    "ServerScriptService": {
+      "Main": { "$path": "src/ServerScriptService/Main.server.luau" },
+      "Services": { "$path": "src/ServerScriptService/Services" }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": { "$path": "src/StarterPlayer/StarterPlayerScripts" }
+    }
+  }
+}

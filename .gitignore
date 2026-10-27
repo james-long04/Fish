@@ -1,0 +1,6 @@
+# Rojo / editor noise
+*.rbxl
+*.rbxlx
+*.rbxl.lock
+.vscode/
+sourcemap.json
